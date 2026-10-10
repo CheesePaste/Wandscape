@@ -26,7 +26,6 @@ import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
@@ -216,12 +215,9 @@ public final class BuildingPreviewCache {
 
     /**
      * 记一笔：这次物化是命中磁盘还是重新烘焙。读盘记整段墙钟，烘焙记**任务累计工作耗时**
-     * （分帧之后墙钟被摊进多帧，只有工作耗时能和读盘直接比）。基准测试自有一套报告，不重复计。
+     * （分帧之后墙钟被摊进多帧，只有工作耗时能和读盘直接比）。
      */
     private static void recordWave(boolean fromDisk, String id, long ns) {
-        if (benchMode != null) {
-            return;
-        }
         if (fromDisk) {
             waveLoads++;
             waveLoadNs += ns;
@@ -324,7 +320,7 @@ public final class BuildingPreviewCache {
                 entry.preview.ready = true;
                 pendingCount--;
             } else {
-                activeJob = startJob(entry.source, false);
+                activeJob = startJob(entry.source);
             }
             if (System.nanoTime() >= frameDeadline) {
                 cursor = (idx + 1) % n;
@@ -389,16 +385,7 @@ public final class BuildingPreviewCache {
             return;
         }
         registered = true;
-        NeoForge.EVENT_BUS.addListener(RenderGuiEvent.Post.class, e -> tick());
-    }
-
-    /** 每帧入口：基准测试在跑就推进它，否则推进正常烘焙队列。 */
-    private static void tick() {
-        if (benchMode != null) {
-            pumpBenchmark();
-        } else {
-            pumpQueue();
-        }
+        NeoForge.EVENT_BUS.addListener(RenderGuiEvent.Post.class, e -> pumpQueue());
     }
 
     /**
@@ -473,28 +460,6 @@ public final class BuildingPreviewCache {
     // ── Frame materialization: load from disk cache, else off-screen bake ──
     // ═══════════════════════════════════════════════════════════════
 
-    /**
-     * **同步**物化：一次调用跑完整栋。基准测试（{@code /wsbench}）与只读趟走这条 —— 它们要的是
-     * 「一栋到底花多少」，与分帧策略无关；正常游玩走 {@link #pumpQueue} 的切片路径。
-     */
-    private static ResourceLocation materialize(BuildingConfig config, Source source) {
-        try {
-            if (source == Source.DISK_ONLY) {
-                return readMaterialize(config);
-            }
-            BakeJob job = startJob(config, true);
-            while (advanceJob(job, Long.MAX_VALUE) != JobStep.DONE) {
-                // 同步路径：切片上限 = 无穷，一次跑完
-            }
-            ResourceLocation loc = finishJob(job);
-            job.buffer.close();
-            return loc;
-        } catch (RuntimeException e) {
-            Log.warn(TAG, "Failed to materialize preview {}: {}", config.id(), e.getMessage());
-            return null;
-        }
-    }
-
     /** 正常泵的磁盘快路径：命中就返回纹理，未命中返回 null（不回退去烤）。 */
     private static ResourceLocation readMaterialize(BuildingConfig config) {
         Path file = frameFile(config);
@@ -513,21 +478,17 @@ public final class BuildingPreviewCache {
 
     /** 全透明 = 上一次烤坏的残留（或空白建筑），丢掉并当未命中。 */
     private static boolean verifyNotBlank(NativeImage image) {
-        try (Timing ignored = time(Phase.POST)) {
-            if (isFullyTransparent(image)) {
-                image.close();
-                return false;
-            }
-            return true;
+        if (isFullyTransparent(image)) {
+            image.close();
+            return false;
         }
+        return true;
     }
 
     private static ResourceLocation upload(NativeImage image) {
-        try (Timing ignored = time(Phase.UPLOAD)) {
-            DynamicTexture tex = new DynamicTexture(image);
-            tex.setFilter(true, false);
-            return Minecraft.getInstance().getTextureManager().register(TEX_NAME, tex);
-        }
+        DynamicTexture tex = new DynamicTexture(image);
+        tex.setFilter(true, false);
+        return Minecraft.getInstance().getTextureManager().register(TEX_NAME, tex);
     }
 
     /**
@@ -535,8 +496,7 @@ public final class BuildingPreviewCache {
      * 探一次：那次 stat 每栋每次都要付，而「没有缓存」本来就是正常路径，不该当成异常去 warn。
      */
     private static NativeImage readFromDisk(Path file) {
-        try (Timing ignored = time(Phase.READ);
-             InputStream in = Files.newInputStream(file)) {
+        try (InputStream in = Files.newInputStream(file)) {
             return NativeImage.read(in);
         } catch (NoSuchFileException e) {
             return null;
@@ -547,7 +507,7 @@ public final class BuildingPreviewCache {
     }
 
     private static void writeToDisk(Path file, NativeImage image, boolean sweepSiblings) {
-        try (Timing ignored = time(Phase.ENCODE)) {
+        try {
             Files.createDirectories(file.getParent());
             image.writeToFile(file.toFile());
             if (sweepSiblings) {
@@ -690,232 +650,6 @@ public final class BuildingPreviewCache {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // ── Benchmark: per-phase timing for bake vs disk read ──
-    // ═══════════════════════════════════════════════════════════════
-
-    /**
-     * 计时阶段。{@code META/DRAW/READBACK/POST/ENCODE} 只出现在烘焙趟，{@code READ} 只出现在读取趟，
-     * {@code POST}（透明校验）与 {@code UPLOAD}（建纹理 + GL 上传）两趟都有。
-     */
-    private enum Phase { META, DRAW, READBACK, POST, ENCODE, READ, UPLOAD }
-
-    private static final int PHASE_COUNT = Phase.values().length;
-
-    /** 取图来源。{@link #DISK_ONLY} 下没有缓存文件就算 miss，绝不回退去烤——否则两趟的数字会混在一起。 */
-    private enum Source { FORCE_BAKE, DISK_ONLY }
-
-    /** {@code /wsbench} 的三种模式。 */
-    public enum BenchMode { BAKE, LOAD, BOTH }
-
-    private static BenchMode benchMode;
-    private static List<BuildingConfig> benchConfigs = List.of();
-    private static boolean benchReadPass;
-    private static int benchCursor;
-    private static BenchPass benchBakePass;
-    private static BenchPass benchLoadPass;
-    private static BenchStats benchInFlight;
-
-    private static final class BenchStats {
-        final long startNs = System.nanoTime();
-        final long[] phases = new long[PHASE_COUNT];
-    }
-
-    private static final class BenchPass {
-        int measured;
-        int misses;
-        long totalNs;
-        long maxNs;
-        BuildingConfig worstConfig;
-        long[] worstPhases;
-        final long[] phases = new long[PHASE_COUNT];
-        final List<Long> walls = new ArrayList<>();
-    }
-
-    /**
-     * 开始一次烘焙 / 读取基准测试，入口是客户端命令 {@code /wsbench}。必须在渲染线程上调用。
-     *
-     * <p>先把纹理与逐配置缓存全清掉（冷启动），再**每帧只推进一座**，记录整座墙钟与分阶段耗时；
-     * 跑完把汇总同时打进日志和聊天栏。返回 false 表示已经有一次在跑。
-     */
-    public static boolean startBenchmark(BenchMode mode) {
-        if (benchMode != null) {
-            return false;
-        }
-        List<BuildingConfig> configs =
-                new ArrayList<>(BuildingConfigLoader.getInstance().getAll().values());
-        if (configs.isEmpty()) {
-            return false;
-        }
-        configs.sort(java.util.Comparator.comparingInt(c -> c.pattern().size()));
-        closeAll();                                  // 清纹理 + CACHE + LOD/包围盒/缩放
-        BuildingPreviewRenderer.clearMetaCache();     // 连元数据也重算，否则第一座白捡便宜
-        benchConfigs = List.copyOf(configs);
-        benchBakePass = mode == BenchMode.LOAD ? null : new BenchPass();
-        benchLoadPass = mode == BenchMode.BAKE ? null : new BenchPass();
-        benchReadPass = benchBakePass == null;
-        benchCursor = 0;
-        benchMode = mode;
-        Log.info(TAG, "[Bench] start mode={} res={} buildings={}", mode, RES, benchConfigs.size());
-        notifyPlayer("预览基准开始：" + mode.name().toLowerCase() + " · " + benchConfigs.size()
-                + " 座 · " + RES + "px（跑完自动出结果）");
-        return true;
-    }
-
-    /** 一帧一座地推进基准测试，跑完自动汇报。 */
-    private static void pumpBenchmark() {
-        if (benchCursor >= benchConfigs.size()) {
-            if (!benchReadPass && benchLoadPass != null) {
-                benchReadPass = true;
-                benchCursor = 0;
-                Log.info(TAG, "[Bench] bake 趟完成，接着测读取趟");
-                return;
-            }
-            finishBenchmark();
-            return;
-        }
-        BuildingConfig config = benchConfigs.get(benchCursor++);
-        request(config);
-        PreviewEntry entry = CACHE.get(config.id());
-        if (entry == null) {
-            return;
-        }
-        if (benchReadPass) {
-            // 读取趟先把上一趟留下的纹理扔掉，否则测到的是「已经上传好了」的假象。
-            closePreview(Minecraft.getInstance().getTextureManager(), entry.preview);
-        }
-        benchInFlight = new BenchStats();
-        ResourceLocation loc = materialize(config, benchReadPass ? Source.DISK_ONLY : Source.FORCE_BAKE);
-        BenchStats stats = benchInFlight;
-        benchInFlight = null;
-        BenchPass pass = benchReadPass ? benchLoadPass : benchBakePass;
-        if (loc == null) {
-            pass.misses++;
-            return;
-        }
-        entry.preview.texture = loc;
-        entry.preview.ready = true;
-        long wall = System.nanoTime() - stats.startNs;
-        pass.measured++;
-        pass.totalNs += wall;
-        pass.maxNs = Math.max(pass.maxNs, wall);
-        pass.walls.add(wall);
-        for (int i = 0; i < PHASE_COUNT; i++) {
-            pass.phases[i] += stats.phases[i];
-        }
-        if (wall >= pass.maxNs) {   // 新晋最坏：留住它的 id 与分阶段，才看得出卡在哪一栋、哪一段
-            pass.worstConfig = config;
-            pass.worstPhases = stats.phases.clone();
-        }
-    }
-
-    private static void finishBenchmark() {
-        List<String> lines = new ArrayList<>();
-        lines.add("[Bench] res=" + RES + " buildings=" + benchConfigs.size()
-                + " mode=" + benchMode + "（每趟一帧一座）");
-        reportPass(lines, benchBakePass, "bake");
-        reportPass(lines, benchLoadPass, "load");
-        for (String line : lines) {
-            Log.info(TAG, line);
-        }
-        // 命令是玩家主动跑的，结论直接上屏；每帧的常态输出仍然只走日志。
-        for (String line : lines) {
-            notifyPlayer(line.replace("[Bench] ", ""));
-        }
-        recountPending();
-        benchMode = null;
-        benchConfigs = List.of();
-        benchBakePass = null;
-        benchLoadPass = null;
-        benchCursor = 0;
-    }
-
-    private static void reportPass(List<String> out, BenchPass pass, String label) {
-        if (pass == null) {
-            return;
-        }
-        if (pass.measured == 0) {
-            out.add("[Bench] " + label + "：无可测样本（miss=" + pass.misses + "）");
-            return;
-        }
-        List<Long> walls = new ArrayList<>(pass.walls);
-        walls.sort(null);
-        out.add(String.format("[Bench] %-4s n=%d miss=%d 总计 %.1f ms 均值 %.2f ms p50 %.2f ms 最大 %.2f ms",
-                label, pass.measured, pass.misses, pass.totalNs / 1e6, pass.totalNs / 1e6 / pass.measured,
-                walls.get(walls.size() / 2) / 1e6, pass.maxNs / 1e6));
-        StringBuilder sb = new StringBuilder("[Bench]   分阶段：");
-        for (Phase phase : Phase.values()) {
-            long ns = pass.phases[phase.ordinal()];
-            if (ns <= 0) {
-                continue;
-            }
-            sb.append(phase).append(' ')
-                    .append(String.format("%.1f", ns / 1e6)).append(" ms(均 ")
-                    .append(String.format("%.2f", ns / 1e6 / pass.measured)).append(")  ");
-        }
-        out.add(sb.toString().trim());
-        if (pass.worstConfig != null) {
-            StringBuilder worst = new StringBuilder("[Bench]   最坏 ")
-                    .append(pass.worstConfig.id()).append(' ')
-                    .append(String.format("%.1f", pass.maxNs / 1e6)).append(" ms：");
-            for (Phase phase : Phase.values()) {
-                long ns = pass.worstPhases[phase.ordinal()];
-                if (ns > 0) {
-                    worst.append(phase).append(' ').append(String.format("%.1f", ns / 1e6)).append("  ");
-                }
-            }
-            out.add(worst.toString().trim());
-        }
-    }
-
-    /** 基准测试直接往 CACHE 里写结果，跑完按实际状态重算待烤数，免得 pendingCount 被算歪。 */
-    private static void recountPending() {
-        int pending = 0;
-        for (PreviewEntry entry : CACHE.values()) {
-            if (!entry.preview.ready) {
-                pending++;
-            }
-        }
-        pendingCount = pending;
-    }
-
-    private static void notifyPlayer(String message) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc != null && mc.player != null) {
-            mc.player.displayClientMessage(Component.literal("[wandscape] " + message), false);
-        }
-    }
-
-    /** 计时开关：不在基准里时返回 0，{@link #lap} 随之什么都不做——正常游玩零开销。 */
-    private static long mark() {
-        return benchInFlight != null ? System.nanoTime() : 0L;
-    }
-
-    private static void lap(Phase phase, long startNs) {
-        if (benchInFlight != null && startNs != 0L) {
-            benchInFlight.phases[phase.ordinal()] += System.nanoTime() - startNs;
-        }
-    }
-
-    /** {@code try (Timing ignored = time(Phase.READ)) { ... }} —— 作用域结束即记一笔。 */
-    private static Timing time(Phase phase) {
-        return new Timing(phase);
-    }
-
-    private static final class Timing implements AutoCloseable {
-        private final Phase phase;
-        private final long startNs;
-
-        Timing(Phase phase) {
-            this.phase = phase;
-            this.startNs = mark();
-        }
-
-        @Override public void close() {
-            lap(phase, startNs);
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════════
     // ── Off-screen bake ──
     // ═══════════════════════════════════════════════════════════════
 
@@ -937,8 +671,6 @@ public final class BuildingPreviewCache {
         final BuildingConfig config;
         final Path file;
         final boolean sweepSiblings;
-        /** 同步路径（基准测试）允许自己算 META；正常泵一律等 worker，渲染线程不碰这段。 */
-        final boolean inlineMeta;
         final ByteBufferBuilder buffer = new ByteBufferBuilder(2 * 1024 * 1024);
         final BufferBuilder builder;
         final MultiBufferSource source;
@@ -950,12 +682,13 @@ public final class BuildingPreviewCache {
         int cursor;
         /** 实际工作耗时（不含等 worker 的 WAIT 帧）——分帧之后只有它是能和读盘直接比的数。 */
         long workNs;
+        /** 空等 META 的帧数，见 {@link #ensureMeta} 的兜底。 */
+        int metaWaits;
 
-        BakeJob(BuildingConfig config, Path file, boolean sweepSiblings, boolean inlineMeta) {
+        BakeJob(BuildingConfig config, Path file, boolean sweepSiblings) {
             this.config = config;
             this.file = file;
             this.sweepSiblings = sweepSiblings;
-            this.inlineMeta = inlineMeta;
             RenderType solid = RenderType.solid();
             this.builder = new BufferBuilder(buffer, solid.mode(), solid.format());
             // 所有格子都用 solid 渲染，所以这一个 builder 就是全部顶点。
@@ -968,12 +701,15 @@ public final class BuildingPreviewCache {
         }
     }
 
+    /** META 空等的上限（帧）：超了就自己在渲染线程上算一次，见 {@link #ensureMeta}。 */
+    private static final int META_WAIT_LIMIT = 120;
+
     /** 起手一栋（不推进）。 */
-    private static BakeJob startJob(BuildingConfig config, boolean inlineMeta) {
+    private static BakeJob startJob(BuildingConfig config) {
         Path file = frameFile(config);
         // 覆盖同名文件不会产生新的孤儿；只有名字变了（pattern / 分辨率 / 视角）才需要扫同族，
         // 所以拿一次 stat 换掉每次写盘都做一遍的目录列举。
-        return new BakeJob(config, file, file != null && !Files.exists(file), inlineMeta);
+        return new BakeJob(config, file, file != null && !Files.exists(file));
     }
 
     /** 推进一栋的结果。{@link #WAIT} 必须让泵**当帧直接收工**，否则会空转到预算耗尽。 */
@@ -1036,7 +772,7 @@ public final class BuildingPreviewCache {
     }
 
     /**
-     * 备好 META + LOD 格表。正常泵只从缓存里取，取不到就交给 worker、这一帧什么都不做 ——
+     * 备好 META + LOD 格表。只从缓存里取，取不到就交给 worker、这一帧什么都不做 ——
      * **这是消抖的另一半**：META 56 栋要 327 ms、最贵一栋上百毫秒，而且它没法切片。
      */
     private static MetaState ensureMeta(BakeJob job) {
@@ -1046,14 +782,17 @@ public final class BuildingPreviewCache {
         if (job.config.pattern().isEmpty()) {
             return MetaState.EMPTY;
         }
-        long tMeta = mark();
         BuildingPreviewRenderer.ConfigPreviewMeta meta = BuildingPreviewRenderer.peekPreviewMeta(job.config);
         LodPreview preview = peekLod(job.config);
         if (meta == null || preview == null) {
-            if (!job.inlineMeta) {
-                requestMetaAsync(job.config);
+            requestMetaAsync(job.config);
+            // 兜底：worker 要是交不出 META（抛异常 / 缓存被谁清了），不能永远等下去 —— 等够
+            // META_WAIT_LIMIT 帧就自己在渲染线程上算一次（一次性卡顿，好过这栋永远不出图）。
+            if (++job.metaWaits <= META_WAIT_LIMIT) {
                 return MetaState.WAIT;
             }
+            Log.warn(TAG, "Preview meta for {} still missing after {} frames — computing inline",
+                    job.config.id(), job.metaWaits);
             if (meta == null) {
                 meta = BuildingPreviewRenderer.getPreviewMeta(job.config);
             }
@@ -1061,7 +800,6 @@ public final class BuildingPreviewCache {
                 preview = lodPreview(job.config, meta);
             }
         }
-        lap(Phase.META, tMeta);
         if (meta.resolvedMap.isEmpty() || preview.cells().isEmpty()) {
             return MetaState.EMPTY;
         }
@@ -1079,7 +817,6 @@ public final class BuildingPreviewCache {
         List<PreviewCell> cells = job.preview.cells();
         int factor = job.preview.factor();
         BlockRenderDispatcher blockRenderer = Minecraft.getInstance().getBlockRenderer();
-        long tDraw = mark();
         while (job.cursor < cells.size()) {
             PreviewCell cell = cells.get(job.cursor++);
             job.pose.pushPose();
@@ -1094,11 +831,9 @@ public final class BuildingPreviewCache {
             job.pose.popPose();
             // 每 64 格才看一次表：别让 nanoTime 自己变成开销
             if ((job.cursor & 0x3F) == 0 && System.nanoTime() >= sliceDeadlineNs) {
-                lap(Phase.DRAW, tDraw);
                 return false;
             }
         }
-        lap(Phase.DRAW, tDraw);
         return true;
     }
 
@@ -1125,28 +860,22 @@ public final class BuildingPreviewCache {
         target.bindWrite(true);
 
         try {
-            long tDraw = mark();
             try (MeshData mesh = job.builder.build()) {
                 if (mesh != null) {
                     RenderType.solid().draw(mesh);
                 }
             }
-            lap(Phase.DRAW, tDraw);
 
             NativeImage image = new NativeImage(RES, RES, false);
-            long tReadback = mark();
             RenderSystem.bindTexture(target.getColorTextureId());
             image.downloadTexture(0, false);
-            lap(Phase.READBACK, tReadback);
 
-            long tPost = mark();
             image.flipY();
             if (isFullyTransparent(image)) {
                 Log.warn(TAG, "Preview bake {} came out fully transparent (projection/camera issue)", job.config.id());
                 image.close();
                 return null;
             }
-            lap(Phase.POST, tPost);
             return image;
         } catch (RuntimeException e) {
             Log.warn(TAG, "Failed to bake preview {}: {}", job.config.id(), e.getMessage());
@@ -1212,8 +941,7 @@ public final class BuildingPreviewCache {
      * 最贵一栋上百毫秒，且不可切片。重复调用很廉价（两次查表 + 一次集合命中）。
      */
     private static void requestMetaAsync(BuildingConfig config) {
-        if (config.pattern().isEmpty() || benchMode != null) {
-            // 基准测试期间不预热：它量的就是真实工作量，别让 worker 抢先把 META 算好。
+        if (config.pattern().isEmpty()) {
             return;
         }
         if (BuildingPreviewRenderer.peekPreviewMeta(config) != null && peekLod(config) != null) {
