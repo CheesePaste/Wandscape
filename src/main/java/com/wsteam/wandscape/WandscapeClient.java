@@ -201,7 +201,7 @@ public class WandscapeClient {
     @SubscribeEvent
     static void onClientSetup(FMLClientSetupEvent event) {
         // Building preview bake resolution from config (one static 3/4-view image per building)
-        int res = ClientConfig.SPEC.isLoaded() ? ClientConfig.PREVIEW_RESOLUTION.get() : 128;
+        int res = ClientConfig.SPEC.isLoaded() ? ClientConfig.PREVIEW_RESOLUTION.get() : 256;
         BuildingPreviewCache.configure(res);
         // Wire server→client packet handlers — open MedievalScreen directly.
         ClientPayloadDispatcher.bind(ExplorationRewardPacket.TYPE, ExplorationHudOverlay::showReward);

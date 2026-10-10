@@ -22,11 +22,14 @@ public final class ClientConfig {
             .defineInRange("panel.flySpeed", 15.0, 1.0, 200.0);
 
     public static final ModConfigSpec.IntValue PREVIEW_RESOLUTION = BUILDER
-            .comment("建筑预览图烘焙分辨率（像素/边，清晰度）：越高越清晰但每栋占的内存/显存越多"
-                    + "（每栋只有一张固定 3/4 视角的静图）。改后需重启游戏重新烘焙。")
-            .comment("Building-preview bake resolution (pixels per side): higher is sharper but each building uses more memory/VRAM "
-                    + "(one static 3/4-view image per building). Restart the game after changing to re-bake.")
-            .defineInRange("preview.resolution", 128, 48, 256);
+            .comment("建筑预览图烘焙分辨率（像素/边，清晰度）：越高越清晰但每栋占的内存/显存越多。"
+                    + "每栋只有一张固定 3/4 视角的静图；施工屏那格按 108 GUI 像素显示（GUI 缩放 3 时约 324 设备像素），"
+                    + "256 基本贴合，128 会被放大 2.5 倍发糊。改后需重启游戏重新烘焙。")
+            .comment("Building-preview bake resolution (pixels per side): higher is sharper but each building uses more memory/VRAM. "
+                    + "One static 3/4-view image per building; the construction screen shows it in a 108-GUI-pixel square "
+                    + "(~324 device pixels at GUI scale 3), so 256 roughly matches it while 128 is upscaled 2.5x and looks soft. "
+                    + "Restart the game after changing to re-bake.")
+            .defineInRange("preview.resolution", 256, 48, 256);
 
     public static final ModConfigSpec.BooleanValue ROAD_GRID = BUILDER
             .comment("道路放置/样条编辑模式下，相机周围地面是否显示半透明灰色 1×1 方块网格辅助线。"

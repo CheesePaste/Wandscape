@@ -72,7 +72,7 @@ public final class BuildingPreviewCache {
     private static final String TAG = "BuildingPreviewCache";
 
     /** Bake resolution (clarity) — set from {@code preview.resolution} config via {@link #configure}. */
-    public static int RES = 128;
+    public static int RES = 256;
 
     /**
      * 固定 3/4 视角：yaw 45° 让正面与一个侧面同时朝向相机，30° 俯角露出屋顶——三者齐备才认得出
@@ -160,11 +160,18 @@ public final class BuildingPreviewCache {
      * 一张缩略图最多画多少格。超了就把建筑按 factor³ 归并，每格只画**一个代表方块**
      * 并把它放大 factor 倍 —— 所以建筑看着仍是连续实心的，不是抽稀出来的点阵。
      *
-     * <p>128 px 的缩略图上，4×4×4 归并后的一格还不到一个像素，观感上是同一张图；
-     * 而绘制次数按 factor³ 下降：那栋超大建筑每帧从 378,882 次掉到 2,925 次。
-     * 方块数在预算内的建筑 factor == 1，逐方块渲染，与改造前完全一致。
+     * <p>**预算必须随 RES² 走，不能写死常量**：归并格子要「小于一个像素」这条观感约束是按
+     * 像素面积成立的。128² 下一直用的 12,000 格就是把这个比值钉死的那个基准（≈0.73 格/像素），
+     * 256² 必须跟着涨到约 48,000 —— 否则超大建筑归并出来的格子会变成屏上 10–20 px 的放大方块。
+     * 绘制次数仍按 factor³ 下降：那栋超大建筑一次实测从 378,882 次掉到 2,925 次。
+     * 方块数在预算内的建筑 factor == 1，逐方块渲染。
      */
-    private static final int LOD_CELL_BUDGET = 12_000;
+    private static final double LOD_CELLS_PER_PIXEL = 12_000.0 / (128.0 * 128.0);
+
+    /** 当前分辨率下的格子预算，见 {@link #LOD_CELLS_PER_PIXEL}。 */
+    private static int lodCellBudget() {
+        return (int) (RES * (double) RES * LOD_CELLS_PER_PIXEL);
+    }
 
     private static TextureTarget target;
     private static final ByteBufferBuilder BAKE_BBB = new ByteBufferBuilder(2 * 1024 * 1024);
@@ -672,7 +679,7 @@ public final class BuildingPreviewCache {
         List<BuildingPreviewRenderer.BlockEntry> full = meta.fullEntries;
 
         int factor = 1;
-        while (factor < 16 && countCells(full, factor) > LOD_CELL_BUDGET) {
+        while (factor < 16 && countCells(full, factor) > lodCellBudget()) {
             factor <<= 1;
         }
 
