@@ -9,6 +9,7 @@ import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.building.internal.ShopStockManager;
 import com.wsteam.wandscape.content.building.data.WorkItem;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -49,14 +50,15 @@ public record BuildingDebugRequestPacket(BlockPos pos) implements CustomPacketPa
 
         var state = sd.getBuildingAt(packet.pos());
         if (state == null) {
-            Log.info(TAG, "[Debug] No building at {} for player {}", packet.pos(), player.getGameProfile().getName());
+            Log.debug(LogCategory.BUILDING, TAG, "[Debug] No building at {} for player {}",
+                    packet.pos(), player.getGameProfile().getName());
             return;
         }
 
         var response = buildResponse(player.level(), state);
         Net.toPlayer(player, response);
 
-        Log.info(TAG, "[Debug] Sent debug data for '{}' at {} to {}",
+        Log.debug(LogCategory.BUILDING, TAG, "[Debug] Sent debug data for '{}' at {} to {}",
                 state.getBuildingTypeId(), packet.pos(), player.getGameProfile().getName());
     }
 

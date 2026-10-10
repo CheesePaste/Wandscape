@@ -76,6 +76,8 @@ public final class LogFilter {
         whitelist.add("RoadProjectionController");
         whitelist.add("Debug");
         whitelist.add("BuildingDebugController");
+        whitelist.add("BuildingDebugRequestPacket");
+        whitelist.add("BuildingAreaSync");
         whitelist.add("Panel");
         whitelist.add("WandscapePanelController");
         whitelist.add("WandscapePanelOverlay");

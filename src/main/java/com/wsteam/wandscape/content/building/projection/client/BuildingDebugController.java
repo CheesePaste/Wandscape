@@ -3,6 +3,7 @@ import com.wsteam.wandscape.content.task.component.Position;
 
 import com.wsteam.wandscape.content.building.projection.network.BuildingDebugRequestPacket;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.foundation.networking.Net;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
@@ -75,7 +76,7 @@ public final class BuildingDebugController {
             // Looking at sky or a non-building block — keep the last info visible
             // briefly (debounced), then fall back to the top bar.
             if (BuildingDebugClientState.getLastRequestedPos() != null) {
-                Log.info(TAG, "[Debug] Look-away — clearing overlay (was pos={})",
+                Log.debug(LogCategory.BUILDING, TAG, "[Debug] Look-away — clearing overlay (was pos={})",
                         BuildingDebugClientState.getLastRequestedPos());
             }
             BuildingDebugClientState.setLastRequestedPos(null);
@@ -99,7 +100,7 @@ public final class BuildingDebugController {
         BuildingDebugClientState.debouncedClear();
 
         Net.toServer(new BuildingDebugRequestPacket(hitPos));
-        Log.info(TAG, "[Debug] Sent request: building={} at {}", buildingId, hitPos);
+        Log.debug(LogCategory.BUILDING, TAG, "[Debug] Sent request: building={} at {}", buildingId, hitPos);
     }
 
     // ── Raycast ─────────────────────────────────────────────────────────────

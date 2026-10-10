@@ -412,6 +412,8 @@ public class ResourceSupplySystem implements EcsSystem {
         if (api == null) return 0;
 
         int cancelled = 0;
+        int removedQueued = 0;
+        int cancelledRunning = 0;
         List<UUID> stations = api.getBuildingsByCategory(colonyId, "workstation");
         Set<String> processedGroups = new HashSet<>();
 
@@ -428,8 +430,7 @@ public class ResourceSupplySystem implements EcsSystem {
                 if (matchesSource(item.params(), item.priority(), sourceType, sourceId)) {
                     api.removeFromQueue(stationId, i);
                     cancelled++;
-                    Log.info(TAG, "[CancelSource] Removed WorkItem [{}] {} from station {} (sourceType={}, sourceId={})",
-                            i, item.blueprintId(), stationId.toString().substring(0, 8), sourceType, sourceId);
+                    removedQueued++;
                 }
             }
         }
@@ -448,10 +449,15 @@ public class ResourceSupplySystem implements EcsSystem {
                         api.clearCurrentTask(t.buildingId);
                     }
                     cancelled++;
-                    Log.info(TAG, "[CancelSource] Cancelled running task #{} for station {} (sourceType={}, sourceId={})",
-                            t.id, t.buildingId != null ? t.buildingId.toString().substring(0, 8) : "null", sourceType, sourceId);
+                    cancelledRunning++;
                 }
             }
+        }
+
+        // 逐条打会随队列深度爆量（实测一次取消在 1.1 秒内打了 156 行），只留一条汇总。
+        if (cancelled > 0) {
+            Log.info(TAG, "[CancelSource] {}:{} — removed {} queued item(s), cancelled {} running task(s)",
+                    sourceType, sourceId, removedQueued, cancelledRunning);
         }
         return cancelled;
     }

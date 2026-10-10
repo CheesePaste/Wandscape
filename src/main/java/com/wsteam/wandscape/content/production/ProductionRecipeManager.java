@@ -8,6 +8,7 @@ import com.wsteam.wandscape.content.production.internal.ColonyRecipeSavedData;
 import com.wsteam.wandscape.content.production.internal.VanillaRecipeTree;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.foundation.util.ItemKey;
 import net.minecraft.server.MinecraftServer;
 import net.neoforged.neoforge.common.NeoForge;
@@ -135,7 +136,9 @@ public final class ProductionRecipeManager {
     private static boolean recordUnlock(MinecraftServer server, UUID colonyId, String normalized, String source) {
         boolean newlyUnlocked = ColonyRecipeSavedData.get(server).unlockRecipe(colonyId, normalized);
         if (newlyUnlocked) {
-            Log.info(TAG, "[Recipe] Colony {} unlocked recipe '{}' via {}",
+            // 逐条解锁是热路径噪声：换模组 / 改数据包后的 resync 会按「配方数 × 殖民地数」放量。
+            // 降为 PRODUCTION 分类的 debug（默认 INFO 时静默，不产生任何行）；汇总见 propagateFrom / resyncTree。
+            Log.debug(LogCategory.PRODUCTION, TAG, "[Recipe] Colony {} unlocked recipe '{}' via {}",
                     shortId(colonyId), normalized, source);
             NeoForge.EVENT_BUS.post(new RecipeUnlockedEvent(colonyId, normalized, source));
         }

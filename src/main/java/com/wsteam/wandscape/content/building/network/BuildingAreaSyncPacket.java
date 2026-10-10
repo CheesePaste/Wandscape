@@ -10,6 +10,7 @@ import com.wsteam.wandscape.api.BuildingApi;
 import com.wsteam.wandscape.api.ColonyApi;
 import com.wsteam.wandscape.content.building.data.BuildingData;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.foundation.networking.Net;
 import net.minecraft.core.BlockPos;
@@ -259,7 +260,7 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
         // Entries changed — drop rebuilt occupancy caches so voxel-conflict previews
         // never compare against stale building shapes.
         entryOccupancies.clear();
-        Log.info(TAG, "[Area] Cached {} building areas", packet.buildings.size());
+        Log.debug(LogCategory.BUILDING, TAG, "[Area] Cached {} building areas", packet.buildings.size());
     }
 
     // ── Factory: server-side creation with pre-rotated boundary ──
@@ -332,7 +333,7 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
                 .map(BuildingAreaSyncPacket::fromBuildingData)
                 .toList();
         Net.toPlayer(player, new BuildingAreaSyncPacket(entries));
-        Log.info(TAG, "[Area] Sent {} building areas to {}", entries.size(),
+        Log.debug(LogCategory.BUILDING, TAG, "[Area] Sent {} building areas to {}", entries.size(),
                 player.getGameProfile().getName());
     }
 
