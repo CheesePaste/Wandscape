@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>创始人不在线时小镇照常运行（NPC 建造/生产、游客经济、每日结算），但收益侧
  * 按 {@code Config.COLONY_OFFLINE_INCOME_MULTIPLIER} 折减：商店利润、服务设施
- * 元素产出、殖民地经验获取都 × 该系数（默认 0.2 = 20%）。消耗侧（NPC 建造、
+ * 元素产出、殖民地经验获取都 × 该系数（默认 0.1 = 10%）。消耗侧（NPC 建造、
  * 商店补货的元素消耗）不打折——离线挂机净收益自然低于在线。
  *
  * <p>离线折减之后还压着一道**全局产出阀门**（默认 1.0 = 不缩放，见 {@link #scaleOutput}）：

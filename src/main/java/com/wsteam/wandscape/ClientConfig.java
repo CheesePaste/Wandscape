@@ -19,7 +19,7 @@ public final class ClientConfig {
                     + "已移除游戏内滚轮/Ctrl 调速，改此值即可整体调整。")
             .comment("V-panel camera flight speed (blocks/second), shared by bird's-eye / road (both spline 3D and top-down) / build sub-modes. "
                     + "In-game scroll/Ctrl speed adjustment has been removed; change this value to adjust globally.")
-            .defineInRange("panel.flySpeed", 15.0, 1.0, 200.0);
+            .defineInRange("panel.flySpeed", 30.0, 1.0, 200.0);
 
     public static final ModConfigSpec.IntValue PREVIEW_RESOLUTION = BUILDER
             .comment("建筑预览图烘焙分辨率（像素/边，清晰度），设置中心里是 128/256/512/1024 四档：越高越清晰，"
