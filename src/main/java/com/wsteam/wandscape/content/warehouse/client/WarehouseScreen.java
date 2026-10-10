@@ -275,18 +275,10 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu>
         addRenderableWidget(btnRecipes);
 
         // 建筑动作按钮：无建筑上下文（便携终端/市政厅代开）时整对隐藏。
+        // 「复原」不再画绿色下划线，可点性本身就是需不需要复原的信号。
         btnRepair = new MedievalButton(repairX, repairY, BTN_W, BTN_H,
                 I18n.name("gui.wandscape.building_action.repair", "复原"),
-                this::onRestoreClicked) {
-            @Override
-            protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-                super.renderWidget(g, mouseX, mouseY, partialTick);
-                if (visible && active && buildingData != null && buildingData.needsRepair()) {
-                    g.fill(getX() + 2, getY() + height - 3, getX() + width - 2, getY() + height - 2,
-                            0xAA2E7D32);
-                }
-            }
-        };
+                this::onRestoreClicked);
         btnDemolish = new MedievalButton(demolishX, demolishY, BTN_W, BTN_H,
                 I18n.name("gui.wandscape.building_action.destroy", "拆除"),
                 this::onDemolishClicked);

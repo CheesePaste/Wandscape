@@ -469,17 +469,11 @@ public abstract class MedievalScreen extends Screen implements ReplayProtectedSc
             by = topPos + panelHeight - 20;
         }
 
+        // 可点性本身就是「需不需要复原」的信号（active=仍缺方块，变暗=已与蓝图一致），
+        // 不再额外画一条绿色下划线。
         btnRepair = new MedievalButton(bx, by, btnW, btnH,
                 I18n.name("gui.wandscape.building_action.repair", "复原"),
-                this::onBuildingRepairClicked) {
-            @Override
-            protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-                super.renderWidget(g, mouseX, mouseY, partialTick);
-                if (visible && active && buildingData != null && buildingData.needsRepair()) {
-                    g.fill(getX() + 2, getY() + height - 3, getX() + width - 2, getY() + height - 2, 0xAA2E7D32);
-                }
-            }
-        };
+                this::onBuildingRepairClicked);
 
         btnDemolish = new MedievalButton(bx + btnW + gap, by, btnW, btnH,
                 I18n.name("gui.wandscape.building_action.destroy", "拆除"),
