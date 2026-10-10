@@ -149,11 +149,14 @@ public record ProjectionPlacePacket(
         }
 
         // 4c. Push tutorial progress — the newly placed building may advance a step.
+        //     镇归属只按「放置者的当前镇」(owner)：建筑本身就是这么归属的
+        //     （placeBuilding → assignToColony(owner)），教程进度必须问同一个镇，否则
+        //     判定看的镇与建筑所属的镇不是同一个。原先按 anchorPos 就近取镇，恰好踩中
+        //     ColonyContextSync 明令禁止的「空间最近小镇」：离市政厅超过 MAX_COLONY_RANGE 时取到
+        //     null（= 服务端不回算，步骤原地不动），附近有邻镇时又拿别人的镇算进度。
         var tutorialApi = com.wsteam.wandscape.api.WandscapeApis.getTutorialApiSilently();
         if (tutorialApi != null) {
-            var colonyApi2 = com.wsteam.wandscape.api.WandscapeApis.getColonyApiSilently();
-            UUID tutorialColony = colonyApi2 != null ? colonyApi2.getColonyId(packet.anchorPos) : null;
-            tutorialApi.sendToPlayer(player, tutorialColony);
+            tutorialApi.sendToPlayer(player, owner);
         }
 
         // 5. 建镇引导：无自有小镇的玩家放置市政厅（建筑未归属）→ 立即弹命名/建镇。
