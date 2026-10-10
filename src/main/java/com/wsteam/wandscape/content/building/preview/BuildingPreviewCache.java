@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -382,7 +383,9 @@ public final class BuildingPreviewCache {
                     return null;
                 }
                 if (file != null) {
-                    writeToDisk(file, image);
+                    // 覆盖同名文件不会产生新的孤儿；只有名字变了（pattern / 分辨率 / 视角）才需要扫同族，
+                    // 所以拿一次 stat 换掉每次写盘都做一遍的目录列目录。
+                    writeToDisk(file, image, !Files.exists(file));
                 }
             }
             try (Timing ignored = time(Phase.UPLOAD)) {
@@ -396,24 +399,29 @@ public final class BuildingPreviewCache {
         }
     }
 
+    /**
+     * 读盘 + 解码。文件不存在走 {@link NoSuchFileException} 直接返回 null —— 不再先 {@code isRegularFile}
+     * 探一次：那次 stat 每栋每次都要付，而「没有缓存」本来就是正常路径，不该当成异常去 warn。
+     */
     private static NativeImage readFromDisk(Path file) {
-        if (!Files.isRegularFile(file)) {
-            return null;
-        }
         try (Timing ignored = time(Phase.READ);
              InputStream in = Files.newInputStream(file)) {
             return NativeImage.read(in);
+        } catch (NoSuchFileException e) {
+            return null;
         } catch (IOException e) {
             Log.warn(TAG, "Failed to read preview cache {} (will re-bake): {}", file, e.getMessage());
             return null;
         }
     }
 
-    private static void writeToDisk(Path file, NativeImage image) {
+    private static void writeToDisk(Path file, NativeImage image, boolean sweepSiblings) {
         try (Timing ignored = time(Phase.ENCODE)) {
             Files.createDirectories(file.getParent());
             image.writeToFile(file.toFile());
-            deleteStaleSiblings(file);
+            if (sweepSiblings) {
+                deleteStaleSiblings(file);
+            }
         } catch (IOException e) {
             Log.warn(TAG, "Failed to save preview cache {}: {}", file, e.getMessage());
         }
@@ -520,11 +528,24 @@ public final class BuildingPreviewCache {
     }
 
     /**
+     * 文件名缓存：{@link #stableName} 要遍历整条 pattern（超大建筑 58 万条）拼一遍字符串，而它
+     * **每次物化**（每栋每次读盘或烘焙）都会被调一次。文件名只由 pattern / RES / 视角决定，
+     * 会话内不变，所以按 {@code config.id()} 缓存下来。
+     *
+     * <p>刻意不进 {@link #closeAll()}：它不持有任何资源，键又走内容比对，配置换代了自己会认新实例。
+     */
+    private static final ConfigKeyedCache<String> NAME_CACHE = new ConfigKeyedCache<>();
+
+    private static String stableName(BuildingConfig config) {
+        return NAME_CACHE.get(config, BuildingPreviewCache::buildStableName);
+    }
+
+    /**
      * Stable content hash so a changed pattern (or resolution / view angle) re-bakes
      * instead of reusing a stale image. 版本不参与哈希——它已经是文件名前缀，
      * 换代由 {@link #purgeStaleFiles} 负责。
      */
-    private static String stableName(BuildingConfig config) {
+    private static String buildStableName(BuildingConfig config) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < config.pattern().size(); i++) {
             sb.append(config.blockIdAt(i)).append(';');
@@ -573,6 +594,8 @@ public final class BuildingPreviewCache {
         int misses;
         long totalNs;
         long maxNs;
+        BuildingConfig worstConfig;
+        long[] worstPhases;
         final long[] phases = new long[PHASE_COUNT];
         final List<Long> walls = new ArrayList<>();
     }
@@ -648,6 +671,10 @@ public final class BuildingPreviewCache {
         for (int i = 0; i < PHASE_COUNT; i++) {
             pass.phases[i] += stats.phases[i];
         }
+        if (wall >= pass.maxNs) {   // 新晋最坏：留住它的 id 与分阶段，才看得出卡在哪一栋、哪一段
+            pass.worstConfig = config;
+            pass.worstPhases = stats.phases.clone();
+        }
     }
 
     private static void finishBenchmark() {
@@ -695,6 +722,18 @@ public final class BuildingPreviewCache {
                     .append(String.format("%.2f", ns / 1e6 / pass.measured)).append(")  ");
         }
         out.add(sb.toString().trim());
+        if (pass.worstConfig != null) {
+            StringBuilder worst = new StringBuilder("[Bench]   最坏 ")
+                    .append(pass.worstConfig.id()).append(' ')
+                    .append(String.format("%.1f", pass.maxNs / 1e6)).append(" ms：");
+            for (Phase phase : Phase.values()) {
+                long ns = pass.worstPhases[phase.ordinal()];
+                if (ns > 0) {
+                    worst.append(phase).append(' ').append(String.format("%.1f", ns / 1e6)).append("  ");
+                }
+            }
+            out.add(worst.toString().trim());
+        }
     }
 
     /** 基准测试直接往 CACHE 里写结果，跑完按实际状态重算待烤数，免得 pendingCount 被算歪。 */
