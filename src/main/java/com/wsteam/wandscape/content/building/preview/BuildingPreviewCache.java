@@ -4,7 +4,9 @@ import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import com.wsteam.wandscape.content.building.data.BlockOffset;
@@ -44,6 +46,8 @@ import java.util.Map;
 import java.util.LinkedHashMap;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -101,8 +105,13 @@ public final class BuildingPreviewCache {
      */
     private static final Pattern VERSION_PREFIX = Pattern.compile("^v(\\d+)_");
 
-    /** Per-frame budget for the bake queue, in nanoseconds. */
-    private static final long BAKE_BUDGET_NS = 8_000_000L;
+    /**
+     * 分帧烘焙的**每帧总预算**。切片之后这个值才真正等于「每帧最多花多少」：以前一步就是一整栋
+     * （最贵那栋 312 ms），而预算是在一步**之后**才检查的，等于拦不住。
+     */
+    private static final long BAKE_BUDGET_NS = 3_000_000L;
+    /** 单次镶嵌切片的上限。最贵的镶嵌（约 4.7 万格）必须被切成很多片，否则它自己就是一整块卡顿。 */
+    private static final long BAKE_SLICE_NS = 1_000_000L;
 
     /** Apply config values before any baking; also kicks off the stale-cache purge. */
     public static void configure(int resolution) {
@@ -184,8 +193,16 @@ public final class BuildingPreviewCache {
     }
 
     private static TextureTarget target;
-    private static final ByteBufferBuilder BAKE_BBB = new ByteBufferBuilder(2 * 1024 * 1024);
-    private static final MultiBufferSource.BufferSource BAKE_SRC = MultiBufferSource.immediate(BAKE_BBB);
+
+    /** 同时只允许一栋在飞：所有任务共用同一个离屏 target，并行会互相覆盖。 */
+    private static BakeJob activeJob;
+
+    /** 已在 worker 上排队的 META 预热，避免重复提交。 */
+    private static final Set<String> META_IN_FLIGHT = ConcurrentHashMap.newKeySet();
+
+    /** 本轮烘焙波次的每帧开销统计，跑空后打一行——用来验收「没有一帧被整栋占满」。 */
+    private static long waveMaxFrameNs;
+    private static int waveFrames;
 
     private BuildingPreviewCache() {}
 
@@ -226,44 +243,76 @@ public final class BuildingPreviewCache {
             CACHE.put(config.id(), new PreviewEntry(config));
             pendingCount++;
         }
+        // 面板每帧每格都会 request，所以这里必须廉价；META 提前在 worker 上备好，
+        // 等真开始烤的时候就不能再落到渲染线程上（那是最贵且不可切的一段）。
+        requestMetaAsync(config);
     }
 
     /** Round-robin start index so a slow config doesn't starve the others. */
     private static int cursor;
 
     /**
-     * Advance the load/bake queue by a small time budget. Must be called on the
-     * render thread once per frame (driven by {@link #register()}).
+     * 每帧的烘焙泵。必须在渲染线程上每帧调用一次（见 {@link #register()}）。
      *
-     * <p>每栋建筑只需一步（一张图），所以一帧内能推进多少栋取决于预算；轮转起点保证超大建筑
-     * 不会独占预算饿死其它建筑。
+     * <p>**消抖的关键**：一帧的总开销由 {@link #BAKE_BUDGET_NS} 封顶，而单栋最贵的镶嵌按
+     * {@link #BAKE_SLICE_NS} 切片跨帧推进 —— 所以任何一帧都不会被一整栋（实测最贵那栋 312 ms）占满。
+     * 代价是总时长变长：以前 56 栋 1 秒烤完但每帧都在卡，现在铺开成几秒的轻微开销。
+     *
+     * <p>磁盘命中仍是同步快路径（一栋一次读 + 解码 + 上传），只有真需要烤的才进 {@link BakeJob}。
      */
     public static void pumpQueue() {
-        if (pendingCount <= 0) {   // 快路径：全部就绪
+        if (pendingCount <= 0 && activeJob == null) {   // 快路径：全部就绪
+            logWaveIfDrained();
             return;
         }
+        long frameStart = System.nanoTime();
+        long frameDeadline = frameStart + BAKE_BUDGET_NS;
         List<String> keys = List.copyOf(CACHE.keySet());
         int n = keys.size();
-        long deadline = System.nanoTime() + BAKE_BUDGET_NS;
         for (int step = 0; step < n; step++) {
-            int idx = (cursor + step) % n;
-            PreviewEntry entry = CACHE.get(keys.get(idx));
-            if (entry == null) {
+            if (activeJob != null) {
+                long slice = Math.min(frameDeadline, System.nanoTime() + BAKE_SLICE_NS);
+                JobStep jobStep = advanceJob(activeJob, slice);
+                if (jobStep == JobStep.DONE) {
+                    completeJob(activeJob);
+                }
+                // WAIT = 在等 worker 备 META：必须当帧收工，否则这里会空转到预算耗尽。
+                if (jobStep == JobStep.WAIT || System.nanoTime() >= frameDeadline) {
+                    break;
+                }
                 continue;
             }
-            BuildingPreview preview = entry.preview;
-            if (!preview.ready) {
-                preview.texture = materialize(entry.source, Source.AUTO);
-                // 单帧：一次尝试即定论。烤失败也标 ready，否则每帧都会重试同一栋。
-                preview.ready = true;
-                pendingCount--;
+            int idx = (cursor + step) % n;
+            PreviewEntry entry = CACHE.get(keys.get(idx));
+            if (entry == null || entry.preview.ready) {
+                continue;
             }
-            if (System.nanoTime() >= deadline) {
+            ResourceLocation fromDisk = readMaterialize(entry.source);
+            if (fromDisk != null) {
+                entry.preview.texture = fromDisk;
+                // 一次尝试即定论：失败也标 ready，否则每帧都会重试同一栋。
+                entry.preview.ready = true;
+                pendingCount--;
+            } else {
+                activeJob = startJob(entry.source, false);
+            }
+            if (System.nanoTime() >= frameDeadline) {
                 cursor = (idx + 1) % n;
-                return;
+                break;
             }
         }
-        cursor = (cursor + 1) % n;
+        waveFrames++;
+        waveMaxFrameNs = Math.max(waveMaxFrameNs, System.nanoTime() - frameStart);
+    }
+
+    /** 一轮烘焙铺完之后打一行，直接验收「单帧最大开销」有没有守住。 */
+    private static void logWaveIfDrained() {
+        if (waveFrames > 1) {
+            Log.info(TAG, "[Bake] 波次结束：{} 帧，单帧最大 {} ms（每帧预算 {} ms / 单片 {} ms）",
+                    waveFrames, waveMaxFrameNs / 1e6, BAKE_BUDGET_NS / 1e6, BAKE_SLICE_NS / 1e6);
+        }
+        waveFrames = 0;
+        waveMaxFrameNs = 0L;
     }
 
     /**
@@ -351,51 +400,68 @@ public final class BuildingPreviewCache {
         BOUNDS_CACHE.clear();
         SCALE_CACHE.clear();
         pendingCount = 0;
+        cursor = 0;
+        waveFrames = 0;
+        waveMaxFrameNs = 0L;
+        if (activeJob != null) {
+            // 顶点缓冲必须整个丢掉：BufferBuilder 没有 discard()，留着残留顶点就会画进下一栋的图里。
+            activeJob.cancel();
+            activeJob = null;
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
     // ── Frame materialization: load from disk cache, else off-screen bake ──
     // ═══════════════════════════════════════════════════════════════
 
+    /**
+     * **同步**物化：一次调用跑完整栋。基准测试（{@code /wsbench}）与只读趟走这条 —— 它们要的是
+     * 「一栋到底花多少」，与分帧策略无关；正常游玩走 {@link #pumpQueue} 的切片路径。
+     */
     private static ResourceLocation materialize(BuildingConfig config, Source source) {
         try {
-            Path file = frameFile(config);
-            NativeImage image = null;
-            if (source != Source.FORCE_BAKE && file != null) {
-                image = readFromDisk(file);
-                if (image != null) {
-                    try (Timing ignored = time(Phase.POST)) {
-                        // Stale cache from a broken bake — discard and re-bake (overwrites below).
-                        if (isFullyTransparent(image)) {
-                            image.close();
-                            image = null;
-                        }
-                    }
-                }
+            if (source == Source.DISK_ONLY) {
+                return readMaterialize(config);
             }
-            if (image == null) {
-                if (source == Source.DISK_ONLY) {
-                    // 只读模式没有缓存文件就是 miss：绝不回退去烤，否则读取趟的数字会被烘焙污染。
-                    return null;
-                }
-                image = bakeFrame(config);
-                if (image == null) {
-                    return null;
-                }
-                if (file != null) {
-                    // 覆盖同名文件不会产生新的孤儿；只有名字变了（pattern / 分辨率 / 视角）才需要扫同族，
-                    // 所以拿一次 stat 换掉每次写盘都做一遍的目录列目录。
-                    writeToDisk(file, image, !Files.exists(file));
-                }
+            BakeJob job = startJob(config, true);
+            while (advanceJob(job, Long.MAX_VALUE) != JobStep.DONE) {
+                // 同步路径：切片上限 = 无穷，一次跑完
             }
-            try (Timing ignored = time(Phase.UPLOAD)) {
-                DynamicTexture tex = new DynamicTexture(image);
-                tex.setFilter(true, false);
-                return Minecraft.getInstance().getTextureManager().register(TEX_NAME, tex);
-            }
+            ResourceLocation loc = finishJob(job);
+            job.buffer.close();
+            return loc;
         } catch (RuntimeException e) {
             Log.warn(TAG, "Failed to materialize preview {}: {}", config.id(), e.getMessage());
             return null;
+        }
+    }
+
+    /** 正常泵的磁盘快路径：命中就返回纹理，未命中返回 null（不回退去烤）。 */
+    private static ResourceLocation readMaterialize(BuildingConfig config) {
+        Path file = frameFile(config);
+        if (file == null) {
+            return null;
+        }
+        NativeImage image = readFromDisk(file);
+        return image != null && verifyNotBlank(image) ? upload(image) : null;
+    }
+
+    /** 全透明 = 上一次烤坏的残留（或空白建筑），丢掉并当未命中。 */
+    private static boolean verifyNotBlank(NativeImage image) {
+        try (Timing ignored = time(Phase.POST)) {
+            if (isFullyTransparent(image)) {
+                image.close();
+                return false;
+            }
+            return true;
+        }
+    }
+
+    private static ResourceLocation upload(NativeImage image) {
+        try (Timing ignored = time(Phase.UPLOAD)) {
+            DynamicTexture tex = new DynamicTexture(image);
+            tex.setFilter(true, false);
+            return Minecraft.getInstance().getTextureManager().register(TEX_NAME, tex);
         }
     }
 
@@ -571,7 +637,7 @@ public final class BuildingPreviewCache {
     private static final int PHASE_COUNT = Phase.values().length;
 
     /** 取图来源。{@link #DISK_ONLY} 下没有缓存文件就算 miss，绝不回退去烤——否则两趟的数字会混在一起。 */
-    private enum Source { AUTO, FORCE_BAKE, DISK_ONLY }
+    private enum Source { FORCE_BAKE, DISK_ONLY }
 
     /** {@code /wsbench} 的三种模式。 */
     public enum BenchMode { BAKE, LOAD, BOTH }
@@ -788,23 +854,184 @@ public final class BuildingPreviewCache {
     // ── Off-screen bake ──
     // ═══════════════════════════════════════════════════════════════
 
-    private static NativeImage bakeFrame(BuildingConfig config) {
-        long tMeta = mark();
-        BuildingPreviewRenderer.ConfigPreviewMeta meta = BuildingPreviewRenderer.getPreviewMeta(config);
-        if (meta.resolvedMap.isEmpty()) {
-            return null;
+    /**
+     * 一栋跨帧烘焙的阶段。**只有 {@link #TESS} 会按时间片切开**（它的成本随建筑大小线性涨），
+     * 其余阶段各自是一次原子操作。
+     */
+    private enum Stage { META, TESS, ASSEMBLE, DONE }
+
+    /** {@link #ensureMeta} 的三态结果。 */
+    private enum MetaState { WAIT, EMPTY, READY }
+
+    /**
+     * 一栋正在烘焙的建筑。**自带一套字节缓冲**，而不是共用静态缓冲：镶嵌结果要跨帧累积，而
+     * {@code BufferBuilder} 没有 {@code discard()} —— 共用缓冲一旦中途被取消（reload / 退世界 /
+     * 内容变了），残留顶点就会画进下一栋的图里。自带缓冲取消时直接 close() 收场。
+     */
+    private static final class BakeJob {
+        final BuildingConfig config;
+        final Path file;
+        final boolean sweepSiblings;
+        /** 同步路径（基准测试）允许自己算 META；正常泵一律等 worker，渲染线程不碰这段。 */
+        final boolean inlineMeta;
+        final ByteBufferBuilder buffer = new ByteBufferBuilder(2 * 1024 * 1024);
+        final BufferBuilder builder;
+        final MultiBufferSource source;
+        Stage stage = Stage.META;
+        BuildingPreviewRenderer.ConfigPreviewMeta meta;
+        LodPreview preview;
+        PoseStack pose;
+        NativeImage image;
+        int cursor;
+
+        BakeJob(BuildingConfig config, Path file, boolean sweepSiblings, boolean inlineMeta) {
+            this.config = config;
+            this.file = file;
+            this.sweepSiblings = sweepSiblings;
+            this.inlineMeta = inlineMeta;
+            RenderType solid = RenderType.solid();
+            this.builder = new BufferBuilder(buffer, solid.mode(), solid.format());
+            // 所有格子都用 solid 渲染，所以这一个 builder 就是全部顶点。
+            this.source = renderType -> builder;
         }
-        LodPreview preview = lodPreview(config, meta);
-        List<PreviewCell> entries = preview.cells();
-        if (entries.isEmpty()) {
-            return null;
+
+        /** 放弃这一栋：释放已镶嵌的顶点缓冲。 */
+        void cancel() {
+            buffer.close();
+        }
+    }
+
+    /** 起手一栋（不推进）。 */
+    private static BakeJob startJob(BuildingConfig config, boolean inlineMeta) {
+        Path file = frameFile(config);
+        // 覆盖同名文件不会产生新的孤儿；只有名字变了（pattern / 分辨率 / 视角）才需要扫同族，
+        // 所以拿一次 stat 换掉每次写盘都做一遍的目录列举。
+        return new BakeJob(config, file, file != null && !Files.exists(file), inlineMeta);
+    }
+
+    /** 推进一栋的结果。{@link #WAIT} 必须让泵**当帧直接收工**，否则会空转到预算耗尽。 */
+    private enum JobStep { WAIT, PROGRESS, DONE }
+
+    /**
+     * 推进一栋。{@code sliceDeadlineNs} 是本次允许花到的时间点。
+     * 返回 {@link JobStep#DONE} = 已收尾（{@link BakeJob#image} 为 null 表示这栋烤不出来）。
+     *
+     * <p>整段包在 catch 里：镶嵌是逐格调 {@code renderSingleBlock} 的，任何一个坏方块模型抛出来
+     * 都不许冒泡进渲染事件（那会变成每帧崩溃），一律降级成「这栋没有图」+ warn。
+     */
+    private static JobStep advanceJob(BakeJob job, long sliceDeadlineNs) {
+        try {
+            while (true) {
+                switch (job.stage) {
+                    case META -> {
+                        MetaState state = ensureMeta(job);
+                        if (state == MetaState.WAIT) {
+                            return JobStep.WAIT;
+                        }
+                        if (state == MetaState.EMPTY) {
+                            job.stage = Stage.DONE;
+                            return JobStep.DONE;
+                        }
+                        job.stage = Stage.TESS;
+                    }
+                    case TESS -> {
+                        if (!tessellate(job, sliceDeadlineNs)) {
+                            return JobStep.PROGRESS;      // 时间片用完，下一帧接着镶
+                        }
+                        job.stage = Stage.ASSEMBLE;       // 镶完了：同一帧把它画出来收尾
+                    }
+                    case ASSEMBLE -> {
+                        job.image = assemble(job);
+                        job.stage = Stage.DONE;
+                        return JobStep.DONE;
+                    }
+                    default -> {
+                        return JobStep.DONE;
+                    }
+                }
+            }
+        } catch (RuntimeException e) {
+            Log.warn(TAG, "Failed to bake preview {}: {}", job.config.id(), e.getMessage());
+            job.image = null;
+            job.stage = Stage.DONE;
+            return JobStep.DONE;
+        }
+    }
+
+    /**
+     * 备好 META + LOD 格表。正常泵只从缓存里取，取不到就交给 worker、这一帧什么都不做 ——
+     * **这是消抖的另一半**：META 56 栋要 327 ms、最贵一栋上百毫秒，而且它没法切片。
+     */
+    private static MetaState ensureMeta(BakeJob job) {
+        if (job.meta != null) {
+            return MetaState.READY;
+        }
+        if (job.config.pattern().isEmpty()) {
+            return MetaState.EMPTY;
+        }
+        long tMeta = mark();
+        BuildingPreviewRenderer.ConfigPreviewMeta meta = BuildingPreviewRenderer.peekPreviewMeta(job.config);
+        LodPreview preview = peekLod(job.config);
+        if (meta == null || preview == null) {
+            if (!job.inlineMeta) {
+                requestMetaAsync(job.config);
+                return MetaState.WAIT;
+            }
+            if (meta == null) {
+                meta = BuildingPreviewRenderer.getPreviewMeta(job.config);
+            }
+            if (preview == null) {
+                preview = lodPreview(job.config, meta);
+            }
         }
         lap(Phase.META, tMeta);
-        ensureTarget();
+        if (meta.resolvedMap.isEmpty() || preview.cells().isEmpty()) {
+            return MetaState.EMPTY;
+        }
+        job.meta = meta;
+        job.preview = preview;
+        job.pose = buildPose(job.config, meta);
+        return MetaState.READY;
+    }
 
+    /**
+     * 按时间片继续镶嵌顶点，剩下的留到下一帧。**这一段是唯一被切的地方**：成本随格子数线性涨
+     * （最贵那栋约 4.7 万格），不切它自己就是一整块几百毫秒的卡顿。
+     */
+    private static boolean tessellate(BakeJob job, long sliceDeadlineNs) {
+        List<PreviewCell> cells = job.preview.cells();
+        int factor = job.preview.factor();
+        BlockRenderDispatcher blockRenderer = Minecraft.getInstance().getBlockRenderer();
         long tDraw = mark();
+        while (job.cursor < cells.size()) {
+            PreviewCell cell = cells.get(job.cursor++);
+            job.pose.pushPose();
+            job.pose.translate(cell.x(), cell.y(), cell.z());
+            // LOD 格子：把代表方块放大 factor 倍填满整格，建筑看上去仍是实心的。
+            if (factor > 1) {
+                job.pose.scale(factor, factor, factor);
+            }
+            blockRenderer.renderSingleBlock(
+                    cell.state(), job.pose, job.source, FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
+                    ModelData.EMPTY, RenderType.solid());
+            job.pose.popPose();
+            // 每 64 格才看一次表：别让 nanoTime 自己变成开销
+            if ((job.cursor & 0x3F) == 0 && System.nanoTime() >= sliceDeadlineNs) {
+                lap(Phase.DRAW, tDraw);
+                return false;
+            }
+        }
+        lap(Phase.DRAW, tDraw);
+        return true;
+    }
+
+    /**
+     * 把已镶嵌好的顶点一次画进离屏 target，回读成图。顶点是上一阶段跨帧攒的、不依赖 target 内容，
+     * 所以 FBO 不需要跨帧保留。返回 null = 这栋烤不出来（已 warn）。
+     */
+    private static NativeImage assemble(BakeJob job) {
+        ensureTarget();
         Minecraft mc = Minecraft.getInstance();
-        BlockRenderDispatcher blockRenderer = mc.getBlockRenderer();
 
         var modelViewStack = RenderSystem.getModelViewStack();
         RenderSystem.backupProjectionMatrix();
@@ -821,29 +1048,12 @@ public final class BuildingPreviewCache {
         target.bindWrite(true);
 
         try {
-            PoseStack pose = new PoseStack();
-            float scale = scaleForView(config, meta);
-            // ModelView is identity; ortho near=1000 far=3000 → visible camera z ∈ [-3000,-1000].
-            pose.translate(RES / 2.0F, RES / 2.0F, -2000.0F);
-            pose.scale(scale, -scale, scale);
-            pose.mulPose(new Quaternionf().rotateX(TILT_RAD));
-            pose.mulPose(new Quaternionf().rotateY(VIEW_YAW_RAD));
-            pose.translate(-meta.cx - 0.5F, -meta.cy - 0.5F, -meta.cz - 0.5F);
-
-            int factor = preview.factor();
-            for (PreviewCell cell : entries) {
-                pose.pushPose();
-                pose.translate(cell.x(), cell.y(), cell.z());
-                // LOD 格子：把代表方块放大 factor 倍填满整格，建筑看上去仍是实心的。
-                if (factor > 1) {
-                    pose.scale(factor, factor, factor);
+            long tDraw = mark();
+            try (MeshData mesh = job.builder.build()) {
+                if (mesh != null) {
+                    RenderType.solid().draw(mesh);
                 }
-                blockRenderer.renderSingleBlock(
-                        cell.state(), pose, BAKE_SRC, FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
-                        ModelData.EMPTY, RenderType.solid());
-                pose.popPose();
             }
-            BAKE_SRC.endBatch();
             lap(Phase.DRAW, tDraw);
 
             NativeImage image = new NativeImage(RES, RES, false);
@@ -855,13 +1065,14 @@ public final class BuildingPreviewCache {
             long tPost = mark();
             image.flipY();
             if (isFullyTransparent(image)) {
-                Log.warn(TAG, "Preview bake {} came out fully transparent (projection/camera issue)", config.id());
+                Log.warn(TAG, "Preview bake {} came out fully transparent (projection/camera issue)", job.config.id());
+                image.close();
                 return null;
             }
             lap(Phase.POST, tPost);
             return image;
         } catch (RuntimeException e) {
-            Log.warn(TAG, "Failed to bake preview {}: {}", config.id(), e.getMessage());
+            Log.warn(TAG, "Failed to bake preview {}: {}", job.config.id(), e.getMessage());
             return null;
         } finally {
             target.unbindWrite();
@@ -872,6 +1083,77 @@ public final class BuildingPreviewCache {
             RenderSystem.disableDepthTest();
             Lighting.setupForFlatItems();
         }
+    }
+
+    /** 收尾：写盘 + 上传纹理（成功才有图）。 */
+    private static ResourceLocation finishJob(BakeJob job) {
+        if (job.image == null) {
+            return null;
+        }
+        if (job.file != null) {
+            writeToDisk(job.file, job.image, job.sweepSiblings);
+        }
+        return upload(job.image);
+    }
+
+    /** 一栋烤完（或失败）：结果落到条目上，并释放顶点缓冲。 */
+    private static void completeJob(BakeJob job) {
+        ResourceLocation loc = finishJob(job);
+        job.buffer.close();
+        activeJob = null;
+        PreviewEntry entry = CACHE.get(job.config.id());
+        // 条目可能已经在烘焙期间被「同 id 内容变了」那条路删掉并自己减过数了，所以只在还没就绪时落值与减数。
+        if (entry != null && !entry.preview.ready) {
+            entry.preview.texture = loc;
+            entry.preview.ready = true;
+            pendingCount = Math.max(0, pendingCount - 1);
+        }
+    }
+
+    /** 镶嵌用的 pose：模型空间 → 屏幕（居中 + 缩放 + 固定 3/4 视角）；每格平移在循环里 push/pop。 */
+    private static PoseStack buildPose(BuildingConfig config, BuildingPreviewRenderer.ConfigPreviewMeta meta) {
+        PoseStack pose = new PoseStack();
+        float scale = scaleForView(config, meta);
+        // ModelView is identity; ortho near=1000 far=3000 → visible camera z ∈ [-3000,-1000].
+        pose.translate(RES / 2.0F, RES / 2.0F, -2000.0F);
+        pose.scale(scale, -scale, scale);
+        pose.mulPose(new Quaternionf().rotateX(TILT_RAD));
+        pose.mulPose(new Quaternionf().rotateY(VIEW_YAW_RAD));
+        pose.translate(-meta.cx - 0.5F, -meta.cy - 0.5F, -meta.cz - 0.5F);
+        return pose;
+    }
+
+    private static LodPreview peekLod(BuildingConfig config) {
+        return LOD_CACHE.peek(config);
+    }
+
+    /**
+     * 把某配置的 META + LOD 格表丢给 worker 预热。渲染线程**永不自己算**它：56 栋要 327 ms、
+     * 最贵一栋上百毫秒，且不可切片。重复调用很廉价（两次查表 + 一次集合命中）。
+     */
+    private static void requestMetaAsync(BuildingConfig config) {
+        if (config.pattern().isEmpty() || benchMode != null) {
+            // 基准测试期间不预热：它量的就是真实工作量，别让 worker 抢先把 META 算好。
+            return;
+        }
+        if (BuildingPreviewRenderer.peekPreviewMeta(config) != null && peekLod(config) != null) {
+            return;
+        }
+        if (!META_IN_FLIGHT.add(config.id())) {
+            return;
+        }
+        Util.backgroundExecutor().execute(() -> {
+            try {
+                BuildingPreviewRenderer.ConfigPreviewMeta meta = BuildingPreviewRenderer.getPreviewMeta(config);
+                if (!meta.resolvedMap.isEmpty()) {
+                    lodPreview(config, meta);
+                }
+            } catch (Throwable t) {
+                Log.warn(TAG, "Async preview meta failed for {}: {}", config.id(), t.getMessage());
+            } finally {
+                META_IN_FLIGHT.remove(config.id());
+            }
+        });
     }
 
     private static void ensureTarget() {
