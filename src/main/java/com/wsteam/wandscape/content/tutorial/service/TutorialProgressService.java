@@ -5,6 +5,7 @@ import com.wsteam.wandscape.content.building.data.BuildingData;
 import com.wsteam.wandscape.content.building.internal.BuildingState;
 import com.wsteam.wandscape.content.tutorial.data.TutorialProgressSavedData;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.content.tutorial.network.TutorialProgressSyncPacket;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.warehouse.ColonyItemBank;
@@ -52,8 +53,20 @@ public final class TutorialProgressService implements TutorialApi {
         // 存档仍记历史最高值：它只在「无当前镇」时回放，并充当上面那个「走完过」的闩。
         sd.set(player.getUUID(), Math.max(saved.stepIndex(), step), saved.dismissed());
         Net.toPlayer(player, new TutorialProgressSyncPacket(step, saved.dismissed()));
-        Log.info(TAG, "[Guide] {} step={} saved={} dismissed={}",
-                player.getGameProfile().getName(), step, saved.stepIndex(), saved.dismissed());
+
+        // 日志只在「引导真的动了」时写一行。本方法是每个仓库存取、每次开面板、每座建筑放置
+        // 都会被调一次的，无条件写就会变成「每存一样东西刷一行」，而且引导走完后依然照刷
+        // （推送点没有「已完成就不推」的开关），latest.log 只会一直长。
+        if (step > saved.stepIndex()) {
+            Log.info(TAG, "[Guide] {} 教程推进 {}→{} dismissed={}",
+                    player.getGameProfile().getName(), saved.stepIndex(), step, saved.dismissed());
+        } else if (step < saved.stepIndex()) {
+            // 上屏值低于存档值：旧版逐条累加写大的值被拉回，或前置建筑已被拆。每玩家每目标值
+            // 只写一次，否则这种玩家每次入仓都会重复同一条。
+            Log.warnOnce(LogCategory.GENERAL, "tutorial.reconcile." + player.getUUID() + "." + step,
+                    "[Guide] {} 上屏步骤 {} 低于存档 {}（旧值偏大或前置已拆），已按现值显示",
+                    player.getGameProfile().getName(), step, saved.stepIndex());
+        }
     }
 
     /**
