@@ -8,6 +8,7 @@ import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTaskPool;
 import com.wsteam.wandscape.content.task.engine.pool.TaskRequest;
@@ -31,7 +32,6 @@ import java.util.Map;
  * 会一直守到脱离区（±guard.releaseRange）无怪才完成，源无需额外限速。
  */
 public final class GuardTaskSource implements TaskSource {
-    private static final String TAG = "GuardTaskSource";
 
     /** 当前活跃守卫任务 id；0 = 无。 */
     private long activeTaskId = 0;
@@ -50,7 +50,7 @@ public final class GuardTaskSource implements TaskSource {
 
         // 清理：上一守卫任务已结束（脱离区无怪 → 任务完成）
         if (activeTaskId != 0 && !pool.isActive(activeTaskId)) {
-            Log.info(TAG, "previous guard task #{} completed/disengaged — clearing", activeTaskId);
+            Log.debug(LogCategory.NPC, "guard", "previous guard task #{} completed/disengaged — clearing", activeTaskId);
             activeTaskId = 0;
         }
 
@@ -61,7 +61,7 @@ public final class GuardTaskSource implements TaskSource {
         // 和平模式：小镇没有会战斗的 NPC → 不发布守卫任务
         // （否则和平 NPC 反复接任务立即完成，造成每轮轮询的空转）
         if (!hasAggressiveNpc()) {
-            Log.info(TAG, "all colony NPCs peaceful — guard task suppressed");
+            Log.debug(LogCategory.NPC, "guard", "all colony NPCs peaceful — guard task suppressed");
             return;
         }
 

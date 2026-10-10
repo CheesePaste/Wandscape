@@ -14,6 +14,7 @@ import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 import com.wsteam.wandscape.content.task.op.executor.OpExecutor;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.api.WandscapeApis;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
@@ -109,7 +110,7 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
             f.complete(null);
         }
         if (!toComplete.isEmpty()) {
-            Log.info(TAG, "guard task completed — {} done, {} pending", toComplete.size(), pending.size());
+            Log.debug(LogCategory.NPC, "guard", "guard task completed — {} done, {} pending", toComplete.size(), pending.size());
         }
     }
 

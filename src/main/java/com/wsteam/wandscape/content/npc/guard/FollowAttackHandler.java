@@ -4,6 +4,7 @@ import com.wsteam.wandscape.content.task.ecs.World;
 import com.wsteam.wandscape.content.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -21,7 +22,6 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
  * 和平模式的 NPC 不标记。每次玩家攻击刷新过期时间（{@code guard.followAttackDurationTicks}）。
  */
 public final class FollowAttackHandler {
-    private static final String TAG = "FollowAttack";
 
     private FollowAttackHandler() {}
 
@@ -43,7 +43,7 @@ public final class FollowAttackHandler {
             if (npc.isPeaceMode()) continue;
             if (!npc.isValidFollowAttackTarget(victim)) continue;
             npc.markFollowAttackTarget(victim);
-            Log.info(TAG, "NPC {} follow-attacks target {} (by {})",
+            Log.debug(LogCategory.NPC, "guard", "NPC {} follow-attacks target {} (by {})",
                     npc.getUUID().toString().substring(0, 8),
                     victim.getUUID().toString().substring(0, 8),
                     player.getName().getString());

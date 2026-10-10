@@ -11,6 +11,7 @@ import com.wsteam.wandscape.content.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.content.task.op.api.AtomicOp;
 import com.wsteam.wandscape.content.task.op.executor.OpExecutor;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.content.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.content.task.runtime.NpcTaskPackage;
@@ -48,7 +49,6 @@ import java.util.concurrent.CompletableFuture;
  */
 public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefenseOp> {
 
-    private static final String TAG = "SelfDefense";
     /** 循环重检间隔（tick）：重选目标 / LOS 重查 / 施法节拍。 */
     private static final int RECHECK_TICKS = 10;
     /** 和平模式逃跑循环重检间隔（tick）。 */
@@ -142,7 +142,7 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
         queue.startPackage(NpcTaskPackage.system("self_defense",
                 new AtomicOp.SelfDefenseOp(com.wsteam.wandscape.foundation.util.BalanceValues.guardSelfDefenseRange()),
                 null, SELF_DEFENSE_PRIORITY));
-        Log.info(TAG, "NPC {} engages {} target={} preempted={}",
+        Log.debug(LogCategory.NPC, "guard", "NPC {} engages {} target={} preempted={}",
                 npcId, what, targetName, hadPackage ? "yes" : "idle");
     }
 
@@ -242,7 +242,7 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
             f.complete(null);
         }
         if (!toComplete.isEmpty()) {
-            Log.info(TAG, "self-defense complete — {} done, {} pending", toComplete.size(), pending.size());
+            Log.debug(LogCategory.NPC, "guard", "self-defense complete — {} done, {} pending", toComplete.size(), pending.size());
         }
     }
 

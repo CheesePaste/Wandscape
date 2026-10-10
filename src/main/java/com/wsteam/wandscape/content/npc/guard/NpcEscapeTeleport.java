@@ -35,8 +35,6 @@ import java.util.concurrent.CompletableFuture;
  */
 public final class NpcEscapeTeleport {
 
-    private static final String TAG = "NpcEscapeTeleport";
-
     /** spec 缺失时 teleport 的 CD 兜底（tick），与 NavigationSystem 一致。 */
     private static final int TELEPORT_COOLDOWN_FALLBACK = 150;
     /** spec 缺失时 teleport 的魔力兜底，与 NavigationSystem 一致。 */
@@ -111,7 +109,7 @@ public final class NpcEscapeTeleport {
         npc.startManualCast(lockTicks);
         // 引导期间定身 + 减伤 75%（SelfDefenseHandler 消费）；替代原「屏蔽环境伤害」免疫
         npc.markTeleportChanneling(gameTime, lockTicks);
-        Log.info(TAG, "NPC {} — environmental damage, teleport escape → ({},{},{})",
+        Log.debug(LogCategory.NPC, "escape", "NPC {} — environmental damage, teleport escape → ({},{},{})",
                 npc.getUUID().toString().substring(0, 8), dest.getX(), dest.getY(), dest.getZ());
         return true;
     }
