@@ -43,4 +43,25 @@ final class ConfigKeyedCache<V> {
     void clear() {
         map.clear();
     }
+
+    /**
+     * 只看不建：没有（或同 id 内容已变）就返回 null，**绝不调用 loader**。
+     * 给「重活丢给 worker 预热、渲染线程只取现成结果」的异步路径用（见 {@code BuildingPreviewCache}）。
+     */
+    V peek(BuildingConfig config) {
+        String key = config.id();
+        Sourced<V> hit = map.get(key);
+        if (hit == null) {
+            return null;
+        }
+        if (hit.source() == config) {
+            return hit.value();
+        }
+        // 实例更替时只比这一次内容；一样就认下新实例，此后走身份短路。
+        if (hit.source().equals(config)) {
+            map.put(key, new Sourced<>(config, hit.value()));
+            return hit.value();
+        }
+        return null;
+    }
 }

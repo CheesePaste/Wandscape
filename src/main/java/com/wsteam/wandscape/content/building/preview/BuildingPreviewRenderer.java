@@ -17,7 +17,7 @@ import java.util.Map;
  * 建筑预览的**数据层**：把 {@link BuildingConfig} 的 pattern 解析成 {@link BlockState}，
  * 并算出预览要用的包围盒中心与尺度，按配置缓存。
  *
- * <p>消费方是预览单帧烘焙（{@code BuildingPreviewCache.bakeFrame/lodPreview}）与虚影渲染
+ * <p>消费方是预览单帧烘焙（{@code BuildingPreviewCache.ensureMeta/lodPreview}）与虚影渲染
  * （{@code BuildingGhostRenderer}）。历史上有两条「自带状态刷新的即时 3D 预览」路径
  * （{@code renderPreview} / {@code renderPreviewBlocks}）已无任何调用方，2026-10-06 删除——
  * 预览统一走 GIF 烘焙，别再往这里加第二套即时渲染。
@@ -80,6 +80,14 @@ public final class BuildingPreviewRenderer {
             return new ConfigPreviewMeta(config);
         }
         return META_CACHE.get(config, ConfigPreviewMeta::new);
+    }
+
+    /**
+     * 只看不建：没算过（或同 id 内容已变）就返回 null。
+     * 异步预热与分帧烘焙用它取现成结果 —— 这段解析很贵（超大建筑几十万条），不能落在渲染线程上。
+     */
+    public static ConfigPreviewMeta peekPreviewMeta(BuildingConfig config) {
+        return META_CACHE.peek(config);
     }
 
     private static Map<BlockOffset, BlockState> buildBlockStates(BuildingConfig config) {
