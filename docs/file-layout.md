@@ -122,7 +122,7 @@ A 和 B 用的是**同一套加载器**：B 里放同 id 的文件就能覆盖 A
 
 | 路径 | 内容 | 写入者 |
 |---|---|---|
-| `config/wandscape/previews/` | 建筑预览的 PNG 帧缓存（按 `名字_hash_帧号.png`） | `BuildingPreviewGifCache` |
+| `config/wandscape/previews/` | 建筑预览静图（每栋一张固定 3/4 视角，`v<版本>_名字_hash.png`；低于当前版本的文件启动时自动清理） | `BuildingPreviewCache` |
 | `config/wandscape/scanner_presets/` | 扫描器客户端预设，每个一个 `.nbt` | `ScannerPresetStore` |
 | `config/wandscape/splines/` | 道路样条模板 JSON（道路工作室导出） | `SplineEditorClientState` |
 | `config/wandscape-common.toml` | 通用配置（含建筑包启停，见 §四） | NeoForge |

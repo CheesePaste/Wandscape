@@ -17,7 +17,7 @@ import java.util.Map;
  * 建筑预览的**数据层**：把 {@link BuildingConfig} 的 pattern 解析成 {@link BlockState}，
  * 并算出预览要用的包围盒中心与尺度，按配置缓存。
  *
- * <p>消费方是预览 GIF 烘焙（{@code BuildingPreviewGifCache.bakeFrame/buildLodPreview}）与虚影渲染
+ * <p>消费方是预览单帧烘焙（{@code BuildingPreviewCache.bakeFrame/lodPreview}）与虚影渲染
  * （{@code BuildingGhostRenderer}）。历史上有两条「自带状态刷新的即时 3D 预览」路径
  * （{@code renderPreview} / {@code renderPreviewBlocks}）已无任何调用方，2026-10-06 删除——
  * 预览统一走 GIF 烘焙，别再往这里加第二套即时渲染。

@@ -151,10 +151,6 @@
     "en_us": "Particle effect level",
     "zh_cn": "粒子效果等级"
   },
-  "gui.wandscape.settings.preview.fps": {
-    "en_us": "Building preview frame rate",
-    "zh_cn": "建筑预览帧率"
-  },
   "gui.wandscape.settings.preview.resolution": {
     "en_us": "Building preview resolution",
     "zh_cn": "建筑预览清晰度"

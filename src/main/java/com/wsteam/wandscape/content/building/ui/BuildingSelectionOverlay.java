@@ -9,7 +9,7 @@ import com.wsteam.wandscape.content.building.internal.BuildingUnlockChecker;
 import com.wsteam.wandscape.content.building.projection.client.ProjectionClientState;
 import com.wsteam.wandscape.content.building.projection.data.BuildingSlot;
 import com.wsteam.wandscape.foundation.log.Log;
-import com.wsteam.wandscape.content.building.preview.BuildingPreviewGifCache;
+import com.wsteam.wandscape.content.building.preview.BuildingPreviewCache;
 import com.wsteam.wandscape.content.building.data.BuildingPackage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -400,8 +400,8 @@ public final class BuildingSelectionOverlay {
 
                 BuildingConfig config = BuildingConfigLoader.getInstance().get(slot.id());
                 if (config != null && !locked) {
-                    BuildingPreviewGifCache.request(config);
-                    ResourceLocation frameLoc = BuildingPreviewGifCache.getFrameLocation(config);
+                    BuildingPreviewCache.request(config);
+                    ResourceLocation frameLoc = BuildingPreviewCache.getFrameLocation(config);
                     if (frameLoc != null) {
                         int px = cellX + PREVIEW_PAD;
                         int py = cellY + PREVIEW_PAD;
@@ -411,8 +411,8 @@ public final class BuildingSelectionOverlay {
                         int bx = px + (pw - size) / 2;
                         int by = py + (ph - size) / 2;
                         g.blit(frameLoc, bx, by, size, size, 0.0F, 0.0F,
-                                BuildingPreviewGifCache.RES, BuildingPreviewGifCache.RES,
-                                BuildingPreviewGifCache.RES, BuildingPreviewGifCache.RES);
+                                BuildingPreviewCache.RES, BuildingPreviewCache.RES,
+                                BuildingPreviewCache.RES, BuildingPreviewCache.RES);
                     }
                 }
             }

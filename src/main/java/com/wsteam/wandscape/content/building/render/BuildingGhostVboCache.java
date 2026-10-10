@@ -79,7 +79,7 @@ public final class BuildingGhostVboCache {
 
     /**
      * 烘焙按**帧**分摊的时间预算 —— 每帧由渲染入口取一次 {@link #bakeDeadline()}，往下传给
-     * 本帧要画的所有虚影共用，与 {@code BuildingPreviewGifCache.pumpQueue} 同一口径
+     * 本帧要画的所有虚影共用，与 {@code BuildingPreviewCache.pumpQueue} 同一口径
      * （那边也是「整个队列共用一个 deadline」，不是每个建筑一份）。
      *
      * <p>为什么不按建筑算：在建工地是**逐个**画的（{@code ConstructionGhostRenderer} 每帧

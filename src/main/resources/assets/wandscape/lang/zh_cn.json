@@ -1205,7 +1205,6 @@
   "gui.wandscape.settings.option.particle_off": "关闭 (OFF)",
   "gui.wandscape.settings.panel.flySpeed": "相机飞行速度",
   "gui.wandscape.settings.particle.level": "粒子效果等级",
-  "gui.wandscape.settings.preview.fps": "建筑预览帧率",
   "gui.wandscape.settings.preview.resolution": "建筑预览清晰度",
   "gui.wandscape.settings.recipe.lockEnabled": "配方锁定机制",
   "gui.wandscape.settings.render.buildingGhost": "建筑虚影",

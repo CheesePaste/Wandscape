@@ -1205,7 +1205,6 @@
   "gui.wandscape.settings.option.particle_off": "Off",
   "gui.wandscape.settings.panel.flySpeed": "Camera flight speed",
   "gui.wandscape.settings.particle.level": "Particle effect level",
-  "gui.wandscape.settings.preview.fps": "Building preview frame rate",
   "gui.wandscape.settings.preview.resolution": "Building preview resolution",
   "gui.wandscape.settings.recipe.lockEnabled": "Synthesize recipe lock mechanic",
   "gui.wandscape.settings.render.buildingGhost": "Building ghost",

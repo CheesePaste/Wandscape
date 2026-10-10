@@ -62,8 +62,8 @@ public record BuildingConfig(
      * 便宜且与 {@link #equals} 一致的哈希。
      *
      * <p>record 自动生成的 {@code hashCode()} 会把**每个组件**都哈希一遍，其中包括整条
-     * {@code pattern} 列表。而配置在本项目里被当成一大批缓存的键（预览 GIF、LOD、包围盒、
-     * 缩放、缩略图 meta、动画格子、虚影 VBO），其中 {@code BuildingPreviewGifCache.pumpQueue}
+     * {@code pattern} 列表。而配置在本项目里被当成一大批缓存的键（预览图、LOD、包围盒、
+     * 缩放、缩略图 meta、动画格子、虚影 VBO），其中 {@code BuildingPreviewCache.pumpQueue}
      * 是**每帧**查的 —— 于是每帧都要把整条 pattern 走一遍（那栋超大建筑 58 万条），
      * 实测占掉渲染线程 68% 的时间。
      *

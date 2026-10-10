@@ -10,7 +10,7 @@ import com.wsteam.wandscape.foundation.ui.component.MedievalButton;
 import com.wsteam.wandscape.foundation.ui.component.MedievalScreen;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
 import com.wsteam.wandscape.foundation.ui.theme.MedievalColors;
-import com.wsteam.wandscape.content.building.preview.BuildingPreviewGifCache;
+import com.wsteam.wandscape.content.building.preview.BuildingPreviewCache;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -138,7 +138,7 @@ public class ConstructionScreen extends MedievalScreen {
 
         // Flush GUI batch so the cached building preview renders on top of the glass panel
         g.bufferSource().endBatch(RenderType.gui());
-        BuildingPreviewGifCache.drawFrame(g, config,
+        BuildingPreviewCache.drawFrame(g, config,
                 leftPos + PREVIEW_X, topPos + PREVIEW_Y, PREVIEW_W, PREVIEW_H);
 
         if (status != null) {

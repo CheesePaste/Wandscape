@@ -13,6 +13,7 @@ import com.wsteam.wandscape.content.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.foundation.log.Log;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.LightTexture;
@@ -33,59 +34,93 @@ import org.joml.Quaternionf;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
- * Rotating building preview thumbnails ("GIF") for the selection bar and the
- * construction confirm screen.
+ * Static 3/4-view building thumbnails for the selection bar and the construction
+ * confirm screen.
  *
- * <p>Each building is off-screen rendered into a small texture for N rotation
- * frames once, then displayed as a cheap 2D flipbook — the per-frame cost is a
- * single texture blit per cell instead of re-tessellating every block.
+ * <p>每栋建筑只烤**一张**静图，视角固定为 3/4（偏航 {@link #VIEW_YAW_RAD} + 俯角
+ * {@link #TILT_RAD}）：正面、一个侧面和屋顶同时可见，比纯正面可辨识得多。历史上这里是
+ * 48 帧转盘（{@code preview.fps} 驱动），而转盘并不提供信息，只是用来掩盖「固定角度难看」；
+ * 固定成 3/4 之后那 48 帧全是冗余——磁盘、显存、烘焙时间和读取时间都是 48 倍。
  *
- * <p>Frames are persisted to {@code <gameDir>/config/wandscape/previews/} (PNG strip per
- * building, one file per frame), so the off-screen bake happens exactly once per
- * building ever; later sessions just read the files back. Buildings are
- * data-driven, so data-pack-added buildings auto-generate their cache on first use.
+ * <p>Each building is off-screen rendered into a small texture once, then displayed as a
+ * cheap 2D blit — the per-frame cost is a single texture blit per cell instead of
+ * re-tessellating every block.
  *
- * <p>Baking runs lazily on the render thread, spread over render frames by a small
- * time budget so the first panel open never hitches. Interior blocks (fully
- * enclosed by opaque cubes) are culled to keep the one-time bake cheap even for
- * multi-thousand-block buildings.
+ * <p>Images are persisted to {@code <gameDir>/config/wandscape/previews/} as
+ * {@code v<版本>_<id>_<内容哈希>.png}，所以烤一次即可跨会话复用。
+ * 版本前缀是文件名里唯一可读的版本标记：{@link #configure(int)} 会在后台把**低于**当前版本的
+ * 文件（以及没有版本前缀的旧管线文件）全部删掉——**bump {@link #CACHE_VERSION} 就是换代 + 自动清理**。
+ *
+ * <p>Baking runs lazily on the render thread, spread over render frames by a small time
+ * budget so the first panel open never hitches. Interior blocks (fully enclosed by opaque
+ * cubes) are culled to keep the one-time bake cheap even for multi-thousand-block buildings.
  */
-public final class BuildingPreviewGifCache {
+public final class BuildingPreviewCache {
 
-    private static final String TAG = "BuildingPreviewGifCache";
+    private static final String TAG = "BuildingPreviewCache";
 
     /** Bake resolution (clarity) — set from {@code preview.resolution} config via {@link #configure}. */
     public static int RES = 128;
-    /** Rotation frames for a full loop — derived from {@code preview.fps} × loop seconds. */
-    public static int FRAME_COUNT = 120;
-    /** Full rotation loop duration in ms (fixed slow turntable). */
-    public static final int LOOP_MS = 4000;
-    private static final float TILT_RAD = (float) Math.toRadians(30);
+
+    /**
+     * 固定 3/4 视角：yaw 45° 让正面与一个侧面同时朝向相机，30° 俯角露出屋顶——三者齐备才认得出
+     * 体量与屋顶形制，纯正面只看得到一面墙。这两个常量进内容哈希，改角度会自动重烤。
+     */
+    private static final float VIEW_YAW_DEG = 45f;
+    private static final float VIEW_YAW_RAD = (float) Math.toRadians(VIEW_YAW_DEG);
+    private static final float TILT_DEG = 30f;
+    private static final float TILT_RAD = (float) Math.toRadians(TILT_DEG);
+
     private static final int FULL_BRIGHT = LightTexture.FULL_BRIGHT;
-    /** Fraction of the texture the building should fill after its rotated footprint. */
+    /** Fraction of the texture the building should fill after its projected footprint. */
     private static final float FILL = 0.78F;
-    /** Bump when the bake pipeline changes so stale disk frames are not reused. */
-    private static final int CACHE_VERSION = 5;
+
+    /**
+     * 缓存版本：**bump 它就等于换代**——文件名前缀随之变新，{@link #configure(int)} 随即清掉所有旧的。
+     * 改动烘焙管线（投影、光照、LOD、视角）必须 bump，否则旧图会被当成有效缓存继续用。
+     */
+    private static final int CACHE_VERSION = 6;
+    private static final String FILE_PREFIX = "v" + CACHE_VERSION + "_";
+    /**
+     * 从文件名前缀读版本号。读不到的是旧管线（48 帧时代 {@code <id>_<hash>_<帧号>.png}）留下的，
+     * 当前代码永远不会再读，一律当过期清掉。
+     */
+    private static final Pattern VERSION_PREFIX = Pattern.compile("^v(\\d+)_");
+
     /** Per-frame budget for the bake queue, in nanoseconds. */
     private static final long BAKE_BUDGET_NS = 8_000_000L;
 
-    /** Apply config values before any baking; changing these re-bakes (hash key includes them). */
-    public static void configure(int resolution, int fps) {
+    /** Apply config values before any baking; also kicks off the stale-cache purge. */
+    public static void configure(int resolution) {
         RES = Math.max(48, resolution);
-        FRAME_COUNT = Math.max(10, fps * (LOOP_MS / 1000));
+        if (purgeStarted) {
+            return;
+        }
+        purgeStarted = true;
+        // 换代时可能要删上万个文件，绝不能占渲染线程。
+        Util.ioPool().execute(BuildingPreviewCache::purgeStaleFiles);
     }
+
+    private static boolean purgeStarted;
 
     private static final String CACHE_SUBDIR = "config/wandscape/previews";
     private static final String TEX_NAME = "wandscape_building_preview";
 
-    private static final class BuildingGif {
-        final ResourceLocation[] frameLocs = new ResourceLocation[FRAME_COUNT];
-        int baked;
+    /** 一栋建筑烤好的一张静图；{@code ready} 后不再重试（失败也如此，避免死循环重烤）。 */
+    private static final class BuildingPreview {
+        ResourceLocation texture;
         boolean ready;
     }
 
@@ -95,23 +130,23 @@ public final class BuildingPreviewGifCache {
      * （datapack 重载、入服同步不清缓存），此时 record 的 {@code equals} 要逐组件比整条 pattern，
      * 偏偏 {@link #getFrameLocation} 是**逐帧逐格**查的：进世界重进后就是每帧每格一次 O(pattern)。
      */
-    private static final class GifEntry {
+    private static final class PreviewEntry {
         final BuildingConfig source;
-        final BuildingGif gif;
+        final BuildingPreview preview;
 
-        GifEntry(BuildingConfig source, BuildingGif gif) {
+        PreviewEntry(BuildingConfig source, BuildingPreview preview) {
             this.source = source;
-            this.gif = gif;
+            this.preview = preview;
         }
 
-        GifEntry(BuildingConfig source) {
-            this(source, new BuildingGif());
+        PreviewEntry(BuildingConfig source) {
+            this(source, new BuildingPreview());
         }
     }
 
-    private static final Map<String, GifEntry> CACHE = new LinkedHashMap<>();
+    private static final Map<String, PreviewEntry> CACHE = new LinkedHashMap<>();
 
-    /** 每个建筑算一次的缩略图 LOD 格子表，见 {@link #buildLodPreview}。 */
+    /** 每栋建筑算一次的缩略图 LOD 格子表，见 {@link #buildLodPreview}。 */
     private static final ConfigKeyedCache<LodPreview> LOD_CACHE = new ConfigKeyedCache<>();
 
     /**
@@ -135,15 +170,15 @@ public final class BuildingPreviewGifCache {
     private static final ByteBufferBuilder BAKE_BBB = new ByteBufferBuilder(2 * 1024 * 1024);
     private static final MultiBufferSource.BufferSource BAKE_SRC = MultiBufferSource.immediate(BAKE_BBB);
 
-    private BuildingPreviewGifCache() {}
+    private BuildingPreviewCache() {}
 
     /**
      * 取该配置的缓存条目：实例没换直接命中；换了但内容相同就认下新实例（只比这一次，
-     * 已烘好的帧继续用，此后走身份短路）；同 id 却内容不同则关掉旧帧纹理并返回 null
+     * 已烤好的图继续用，此后走身份短路）；同 id 却内容不同则关掉旧纹理并返回 null
      * （调用方会当作没缓存重建）。
      */
-    private static GifEntry entryFor(BuildingConfig config) {
-        GifEntry entry = CACHE.get(config.id());
+    private static PreviewEntry entryFor(BuildingConfig config) {
+        PreviewEntry entry = CACHE.get(config.id());
         if (entry == null) {
             return null;
         }
@@ -151,14 +186,14 @@ public final class BuildingPreviewGifCache {
             return entry;
         }
         if (entry.source.equals(config)) {
-            GifEntry adopted = new GifEntry(config, entry.gif);
+            PreviewEntry adopted = new PreviewEntry(config, entry.preview);
             CACHE.put(config.id(), adopted);
             return adopted;
         }
         Minecraft mc = Minecraft.getInstance();
-        closeGif(mc != null ? mc.getTextureManager() : null, entry.gif);
+        closePreview(mc != null ? mc.getTextureManager() : null, entry.preview);
         CACHE.remove(config.id());
-        if (!entry.gif.ready) {
+        if (!entry.preview.ready) {
             pendingCount = Math.max(0, pendingCount - 1);
         }
         return null;
@@ -171,7 +206,7 @@ public final class BuildingPreviewGifCache {
         }
         // get + put 而非 computeIfAbsent：要能分辨「这次是否新建」，才好维护 pendingCount。
         if (entryFor(config) == null) {
-            CACHE.put(config.id(), new GifEntry(config));
+            CACHE.put(config.id(), new PreviewEntry(config));
             pendingCount++;
         }
     }
@@ -183,9 +218,8 @@ public final class BuildingPreviewGifCache {
      * Advance the load/bake queue by a small time budget. Must be called on the
      * render thread once per frame (driven by {@link #register()}).
      *
-     * <p>Each config advances at most one frame per call, so small buildings fill in
-     * almost instantly while huge ones make progress one frame at a time; a rotating
-     * start keeps a multi-thousand-block building from monopolising the budget.
+     * <p>每栋建筑只需一步（一张图），所以一帧内能推进多少栋取决于预算；轮转起点保证超大建筑
+     * 不会独占预算饿死其它建筑。
      */
     public static void pumpQueue() {
         if (pendingCount <= 0) {   // 快路径：全部就绪
@@ -196,27 +230,16 @@ public final class BuildingPreviewGifCache {
         long deadline = System.nanoTime() + BAKE_BUDGET_NS;
         for (int step = 0; step < n; step++) {
             int idx = (cursor + step) % n;
-            GifEntry entry = CACHE.get(keys.get(idx));
+            PreviewEntry entry = CACHE.get(keys.get(idx));
             if (entry == null) {
                 continue;
             }
-            BuildingConfig config = entry.source;
-            BuildingGif gif = entry.gif;
-            if (!gif.ready) {
-                if (gif.baked >= FRAME_COUNT) {
-                    gif.ready = true;
-                    pendingCount--;
-                } else {
-                    ResourceLocation loc = materializeFrame(config, gif.baked);
-                    if (loc != null) {
-                        gif.frameLocs[gif.baked] = loc;
-                    }
-                    gif.baked++;
-                    if (gif.baked >= FRAME_COUNT) {
-                        gif.ready = true;
-                        pendingCount--;
-                    }
-                }
+            BuildingPreview preview = entry.preview;
+            if (!preview.ready) {
+                preview.texture = materialize(entry.source);
+                // 单帧：一次尝试即定论。烤失败也标 ready，否则每帧都会重试同一栋。
+                preview.ready = true;
+                pendingCount--;
             }
             if (System.nanoTime() >= deadline) {
                 cursor = (idx + 1) % n;
@@ -251,28 +274,19 @@ public final class BuildingPreviewGifCache {
     }
 
     /**
-     * Current frame texture for a config, or null if not ready. Returns the first
-     * baked frame as a static placeholder while the rest of the animation is still
-     * baking, so the building appears immediately.
+     * Texture of this building's 3/4 view, or null if it is not baked yet. Callers treat
+     * null as "draw nothing this frame" — the bake pump fills it in a few frames later.
      */
     public static ResourceLocation getFrameLocation(BuildingConfig config) {
-        GifEntry entry = entryFor(config);
-        if (entry == null) {
-            return null;
-        }
-        BuildingGif gif = entry.gif;
-        if (!gif.ready) {
-            return gif.frameLocs[0];
-        }
-        int frame = (int) (((System.currentTimeMillis() % LOOP_MS) / (float) LOOP_MS) * FRAME_COUNT);
-        return gif.frameLocs[Math.floorMod(frame, FRAME_COUNT)];
+        PreviewEntry entry = entryFor(config);
+        return entry == null ? null : entry.preview.texture;
     }
 
     /**
      * Single-building display helper (e.g. the construction confirm screen): requests
-     * the config and blits the current frame centered in the given rect. Baking is
-     * driven by the central per-frame pump, so this only draws. Call on the render
-     * thread once per frame.
+     * the config and blits the preview centered in the given rect. Baking is driven by
+     * the central per-frame pump, so this only draws. Call on the render thread once
+     * per frame.
      */
     public static void drawFrame(GuiGraphics g, BuildingConfig config, int x, int y, int w, int h) {
         request(config);
@@ -289,27 +303,23 @@ public final class BuildingPreviewGifCache {
         com.mojang.blaze3d.systems.RenderSystem.disableBlend();
     }
 
-    /** 关掉一条缓存持有的全部帧纹理（{@link #closeAll} 与「同 id 内容变了」两条路共用）。 */
-    private static void closeGif(TextureManager tm, BuildingGif gif) {
-        if (tm == null) {
+    /** 关掉一条缓存持有的纹理（{@link #closeAll} 与「同 id 内容变了」两条路共用）。 */
+    private static void closePreview(TextureManager tm, BuildingPreview preview) {
+        if (tm == null || preview.texture == null) {
             return;
         }
-        for (ResourceLocation loc : gif.frameLocs) {
-            if (loc == null) {
-                continue;
-            }
-            AbstractTexture tex = tm.getTexture(loc);
-            if (tex != null) {
-                tex.close();
-            }
+        AbstractTexture tex = tm.getTexture(preview.texture);
+        if (tex != null) {
+            tex.close();
         }
+        preview.texture = null;
     }
 
     public static void closeAll() {
         Minecraft mc = Minecraft.getInstance();
         TextureManager tm = mc != null ? mc.getTextureManager() : null;
-        for (GifEntry entry : CACHE.values()) {
-            closeGif(tm, entry.gif);
+        for (PreviewEntry entry : CACHE.values()) {
+            closePreview(tm, entry.preview);
         }
         CACHE.clear();
         LOD_CACHE.clear();
@@ -322,27 +332,29 @@ public final class BuildingPreviewGifCache {
     // ── Frame materialization: load from disk cache, else off-screen bake ──
     // ═══════════════════════════════════════════════════════════════
 
-    private static ResourceLocation materializeFrame(BuildingConfig config, int f) {
+    private static ResourceLocation materialize(BuildingConfig config) {
         try {
-            Path file = frameFile(config, f);
-            NativeImage image = readFromDisk(file);
+            Path file = frameFile(config);
+            NativeImage image = file != null ? readFromDisk(file) : null;
             if (image != null && isFullyTransparent(image)) {
                 // Stale cache from a broken bake — discard and re-bake (overwrites below).
                 image.close();
                 image = null;
             }
             if (image == null) {
-                image = bakeFrame(config, f);
+                image = bakeFrame(config);
                 if (image == null) {
                     return null;
                 }
-                writeToDisk(file, image);
+                if (file != null) {
+                    writeToDisk(file, image);
+                }
             }
             DynamicTexture tex = new DynamicTexture(image);
             tex.setFilter(true, false);
             return Minecraft.getInstance().getTextureManager().register(TEX_NAME, tex);
         } catch (RuntimeException e) {
-            Log.warn(TAG, "Failed to materialize preview frame {}#{}: {}", config.id(), f, e.getMessage());
+            Log.warn(TAG, "Failed to materialize preview {}: {}", config.id(), e.getMessage());
             return null;
         }
     }
@@ -363,17 +375,117 @@ public final class BuildingPreviewGifCache {
         try {
             Files.createDirectories(file.getParent());
             image.writeToFile(file.toFile());
+            deleteStaleSiblings(file);
         } catch (IOException e) {
             Log.warn(TAG, "Failed to save preview cache {}: {}", file, e.getMessage());
         }
     }
 
-    private static Path frameFile(BuildingConfig config, int f) {
-        Path dir = Minecraft.getInstance().gameDirectory.toPath().resolve(CACHE_SUBDIR);
-        return dir.resolve(stableName(config) + "_" + f + ".png");
+    /**
+     * 同一栋建筑在当前版本下只该留一个文件。改 pattern / 改分辨率都会换内容哈希、写出新文件名，
+     * 旧的那张如果不删就永远留着（旧管线时代每改一次要漏 48 个文件，正是缓存目录膨胀的主因）。
+     */
+    private static void deleteStaleSiblings(Path file) {
+        String name = file.getFileName().toString();
+        int cut = name.lastIndexOf('_');
+        if (cut < 0) {
+            return;
+        }
+        // id 只由 [A-Za-z0-9._-] 组成，glob 里没有元字符，前缀直接当 pattern 用是安全的。
+        String glob = name.substring(0, cut + 1) + "*.png";
+        int removed = 0;
+        try (DirectoryStream<Path> siblings = Files.newDirectoryStream(file.getParent(), glob)) {
+            for (Path p : siblings) {
+                if (!p.getFileName().toString().equals(name)) {
+                    Files.deleteIfExists(p);
+                    removed++;
+                }
+            }
+        } catch (IOException e) {
+            Log.warn(TAG, "Failed to sweep stale sibling of {}: {}", file, e.getMessage());
+            return;
+        }
+        if (removed > 0) {
+            Log.info(TAG, "Removed {} stale file(s) superseded by {}", removed, name);
+        }
     }
 
-    /** Stable content hash so a changed pattern re-bakes instead of reusing stale frames. */
+    // ═══════════════════════════════════════════════════════════════
+    // ── Cache maintenance: drop everything below the current version ──
+    // ═══════════════════════════════════════════════════════════════
+
+    private static Path previewDir() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc == null ? null : mc.gameDirectory.toPath().resolve(CACHE_SUBDIR);
+    }
+
+    /**
+     * 删掉所有低于当前 {@link #CACHE_VERSION} 的缓存文件（读不出版本前缀的旧管线文件同样算过期）。
+     * 只删更旧的、保留当前与更高版本，所以：
+     * <ul>
+     *   <li>bump 版本 → 换代并自动清理，不需要人工删目录；</li>
+     *   <li>装回旧版本模组 → 旧代码看到的是「更新的」文件，不会被删，只是重烤。</li>
+     * </ul>
+     */
+    private static void purgeStaleFiles() {
+        Path dir = previewDir();
+        if (dir == null || !Files.isDirectory(dir)) {
+            return;
+        }
+        int removed = 0;
+        int kept = 0;
+        long bytes = 0L;
+        try (DirectoryStream<Path> files = Files.newDirectoryStream(dir)) {
+            for (Path p : files) {
+                if (!Files.isRegularFile(p)) {
+                    continue;
+                }
+                if (!isStaleCacheFile(p.getFileName().toString())) {
+                    kept++;
+                    continue;
+                }
+                try {
+                    bytes += Files.size(p);
+                    if (Files.deleteIfExists(p)) {
+                        removed++;
+                    }
+                } catch (IOException e) {
+                    Log.warn(TAG, "Failed to delete stale preview {}: {}", p, e.getMessage());
+                }
+            }
+        } catch (IOException e) {
+            Log.warn(TAG, "Failed to scan preview cache {}: {}", dir, e.getMessage());
+            return;
+        }
+        if (removed > 0) {
+            Log.info(TAG, "Purged {} preview file(s) below v{} ({} MB reclaimed, {} kept)",
+                    removed, CACHE_VERSION, bytes / 1048576L, kept);
+        }
+    }
+
+    /** 文件名是否属于「更旧的一代」——没有版本前缀视为旧管线遗产。 */
+    private static boolean isStaleCacheFile(String fileName) {
+        Matcher m = VERSION_PREFIX.matcher(fileName);
+        if (!m.find()) {
+            return true;
+        }
+        try {
+            return Integer.parseInt(m.group(1)) < CACHE_VERSION;
+        } catch (NumberFormatException e) {
+            return true;
+        }
+    }
+
+    private static Path frameFile(BuildingConfig config) {
+        Path dir = previewDir();
+        return dir == null ? null : dir.resolve(stableName(config) + ".png");
+    }
+
+    /**
+     * Stable content hash so a changed pattern (or resolution / view angle) re-bakes
+     * instead of reusing a stale image. 版本不参与哈希——它已经是文件名前缀，
+     * 换代由 {@link #purgeStaleFiles} 负责。
+     */
     private static String stableName(BuildingConfig config) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < config.pattern().size(); i++) {
@@ -382,16 +494,16 @@ public final class BuildingPreviewGifCache {
         for (BlockOffset o : config.pattern()) {
             sb.append(o.x()).append(',').append(o.y()).append(',').append(o.z()).append(';');
         }
-        sb.append(RES).append('x').append(RES).append('_').append(FRAME_COUNT).append("_v").append(CACHE_VERSION);
+        sb.append(RES).append('_').append((int) VIEW_YAW_DEG).append('_').append((int) TILT_DEG);
         String id = config.id().replaceAll("[^A-Za-z0-9._-]", "_");
-        return id + "_" + Integer.toHexString(sb.toString().hashCode());
+        return FILE_PREFIX + id + "_" + Integer.toHexString(sb.toString().hashCode());
     }
 
     // ═══════════════════════════════════════════════════════════════
     // ── Off-screen bake ──
     // ═══════════════════════════════════════════════════════════════
 
-    private static NativeImage bakeFrame(BuildingConfig config, int f) {
+    private static NativeImage bakeFrame(BuildingConfig config) {
         BuildingPreviewRenderer.ConfigPreviewMeta meta = BuildingPreviewRenderer.getPreviewMeta(config);
         if (meta.resolvedMap.isEmpty()) {
             return null;
@@ -405,7 +517,6 @@ public final class BuildingPreviewGifCache {
 
         Minecraft mc = Minecraft.getInstance();
         BlockRenderDispatcher blockRenderer = mc.getBlockRenderer();
-        float angle = (f / (float) FRAME_COUNT) * (float) (Math.PI * 2);
 
         var modelViewStack = RenderSystem.getModelViewStack();
         RenderSystem.backupProjectionMatrix();
@@ -423,12 +534,12 @@ public final class BuildingPreviewGifCache {
 
         try {
             PoseStack pose = new PoseStack();
-            float scale = scaleForBuilding(config, meta);
+            float scale = scaleForView(config, meta);
             // ModelView is identity; ortho near=1000 far=3000 → visible camera z ∈ [-3000,-1000].
             pose.translate(RES / 2.0F, RES / 2.0F, -2000.0F);
             pose.scale(scale, -scale, scale);
             pose.mulPose(new Quaternionf().rotateX(TILT_RAD));
-            pose.mulPose(new Quaternionf().rotateY(angle));
+            pose.mulPose(new Quaternionf().rotateY(VIEW_YAW_RAD));
             pose.translate(-meta.cx - 0.5F, -meta.cy - 0.5F, -meta.cz - 0.5F);
 
             int factor = preview.factor();
@@ -451,12 +562,12 @@ public final class BuildingPreviewGifCache {
             image.downloadTexture(0, false);
             image.flipY();
             if (isFullyTransparent(image)) {
-                Log.warn(TAG, "Preview bake {}#{} came out fully transparent (projection/camera issue)", config.id(), f);
+                Log.warn(TAG, "Preview bake {} came out fully transparent (projection/camera issue)", config.id());
                 return null;
             }
             return image;
         } catch (RuntimeException e) {
-            Log.warn(TAG, "Failed to bake preview frame {}#{}: {}", config.id(), f, e.getMessage());
+            Log.warn(TAG, "Failed to bake preview {}: {}", config.id(), e.getMessage());
             return null;
         } finally {
             target.unbindWrite();
@@ -495,19 +606,16 @@ public final class BuildingPreviewGifCache {
     private static final ConfigKeyedCache<Float> SCALE_CACHE = new ConfigKeyedCache<>();
 
     /**
-     * One constant scale per building, based on the worst-case rotated footprint
-     * across all frames, so the building renders the same size at every angle —
-     * rotating only, never zooming. Nothing clips because the worst case fits.
+     * One constant scale per building, based on the projected footprint at the fixed
+     * 3/4 view, so the building fills {@link #FILL} of the frame and never clips.
+     *
+     * <p>以前要对 48 个角度取最坏值（转盘每帧都得一样大），现在只有一个角度，
+     * 建筑因此能画得更大——静图比转盘图更容易看清就是这么来的。
      */
-    private static float scaleForBuilding(BuildingConfig config, BuildingPreviewRenderer.ConfigPreviewMeta meta) {
+    private static float scaleForView(BuildingConfig config, BuildingPreviewRenderer.ConfigPreviewMeta meta) {
         return SCALE_CACHE.get(config, k -> {
             float[] b = boundsOf(k, meta);
-            float maxProj = 0f;
-            for (int f = 0; f < FRAME_COUNT; f++) {
-                float angle = (f / (float) FRAME_COUNT) * (float) (Math.PI * 2);
-                maxProj = Math.max(maxProj, projectedFootprint(b, angle));
-            }
-            return RES * FILL / Math.max(maxProj, 1e-4f);
+            return RES * FILL / Math.max(projectedFootprint(b, VIEW_YAW_RAD), 1e-4f);
         });
     }
 

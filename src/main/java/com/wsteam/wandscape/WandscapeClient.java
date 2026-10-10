@@ -52,7 +52,7 @@ import com.wsteam.wandscape.content.building.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelController;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelOverlay;
 import com.wsteam.wandscape.foundation.ui.panel.WandscapePanelState;
-import com.wsteam.wandscape.content.building.preview.BuildingPreviewGifCache;
+import com.wsteam.wandscape.content.building.preview.BuildingPreviewCache;
 import com.wsteam.wandscape.content.tourist.client.TouristDebugRenderer;
 import com.wsteam.wandscape.content.tourist.client.TouristRenderer;
 import com.wsteam.wandscape.content.tourist.client.TouristScreen;
@@ -157,7 +157,7 @@ public class WandscapeClient {
         // Wandscape Panel
         WandscapePanelController.register();
         // Register the preview bake pump BEFORE the panel overlay so blits see fresh frames
-        com.wsteam.wandscape.content.building.preview.BuildingPreviewGifCache.register();
+        com.wsteam.wandscape.content.building.preview.BuildingPreviewCache.register();
         WandscapePanelOverlay.register();
         com.wsteam.wandscape.foundation.ui.util.WandscapeHighlightRenderer.register();
 
@@ -200,10 +200,9 @@ public class WandscapeClient {
 
     @SubscribeEvent
     static void onClientSetup(FMLClientSetupEvent event) {
-        // Building preview GIF bake params (clarity + framerate) from config
+        // Building preview bake resolution from config (one static 3/4-view image per building)
         int res = ClientConfig.SPEC.isLoaded() ? ClientConfig.PREVIEW_RESOLUTION.get() : 128;
-        int fps = ClientConfig.SPEC.isLoaded() ? ClientConfig.PREVIEW_FPS.get() : 12;
-        BuildingPreviewGifCache.configure(res, fps);
+        BuildingPreviewCache.configure(res);
         // Wire server→client packet handlers — open MedievalScreen directly.
         ClientPayloadDispatcher.bind(ExplorationRewardPacket.TYPE, ExplorationHudOverlay::showReward);
         ClientPayloadDispatcher.bind(WarehouseDataPacket.TYPE, packet -> {
@@ -607,8 +606,8 @@ public class WandscapeClient {
                         Component.translatable("message.wandscape.town.patchouli_hint"), false);
             }
         }
-        // Pre-warm building preview GIFs in the background so the panel is ready early
-        BuildingPreviewGifCache.warmAll();
+        // Pre-warm building previews in the background so the panel is ready early
+        BuildingPreviewCache.warmAll();
     }
 
     /** Reset client panel/UI state on disconnect so it doesn't leak into the next world. */
@@ -708,8 +707,8 @@ public class WandscapeClient {
                         .thenRun(BuildingGhostVboCache::closeAll)
                         .thenRun(BuildingGhostRenderer::clearAnimatedCache)
                         .thenRun(BuildingPreviewRenderer::clearMetaCache)
-                        .thenRun(BuildingPreviewGifCache::closeAll)
-                        .thenRun(BuildingPreviewGifCache::warmAll);
+                        .thenRun(BuildingPreviewCache::closeAll)
+                        .thenRun(BuildingPreviewCache::warmAll);
             }
         });
     }

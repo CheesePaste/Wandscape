@@ -159,16 +159,6 @@ public final class SettingsRegistry {
                 val -> val + " px"
         ));
 
-        register(new SettingItem.IntSetting(
-                "preview.fps",
-                title("preview.fps", "建筑预览帧率"),
-                SettingTab.VISUAL,
-                true, false,
-                ClientConfig.PREVIEW_FPS,
-                2, 4,
-                val -> val + " FPS"
-        ));
-
         register(new SettingItem.BooleanSetting(
                 "general.debug",
                 title("general.debug", "详细调试日志"),

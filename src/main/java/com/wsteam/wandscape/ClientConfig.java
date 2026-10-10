@@ -22,18 +22,11 @@ public final class ClientConfig {
             .defineInRange("panel.flySpeed", 15.0, 1.0, 200.0);
 
     public static final ModConfigSpec.IntValue PREVIEW_RESOLUTION = BUILDER
-            .comment("建筑预览 GIF 烘焙分辨率（像素/边，清晰度）：越高越清晰但每帧占的内存/显存越多。"
-                    + "改后需重启游戏重新烘焙。")
-            .comment("Building-preview GIF bake resolution (pixels per side): higher is sharper but each frame uses more memory/VRAM. "
-                    + "Restart the game after changing to re-bake.")
+            .comment("建筑预览图烘焙分辨率（像素/边，清晰度）：越高越清晰但每栋占的内存/显存越多"
+                    + "（每栋只有一张固定 3/4 视角的静图）。改后需重启游戏重新烘焙。")
+            .comment("Building-preview bake resolution (pixels per side): higher is sharper but each building uses more memory/VRAM "
+                    + "(one static 3/4-view image per building). Restart the game after changing to re-bake.")
             .defineInRange("preview.resolution", 128, 48, 256);
-
-    public static final ModConfigSpec.IntValue PREVIEW_FPS = BUILDER
-            .comment("建筑预览 GIF 播放帧率（每秒帧数）：越高旋转越顺滑，但帧数越多、烘焙时间与内存越大"
-                    + "（4 秒转一圈 → 帧数 = fps×4，默认 12 = 48 帧）。改后需重启游戏重新烘焙。")
-            .comment("Building-preview GIF playback frame rate (fps): higher is smoother rotation but more frames, a longer bake time, and more memory "
-                    + "(4 s per rotation → frames = fps×4, default 12 = 48 frames). Restart the game after changing to re-bake.")
-            .defineInRange("preview.fps", 12, 4, 60);
 
     public static final ModConfigSpec.BooleanValue ROAD_GRID = BUILDER
             .comment("道路放置/样条编辑模式下，相机周围地面是否显示半透明灰色 1×1 方块网格辅助线。"
