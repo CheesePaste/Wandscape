@@ -231,6 +231,57 @@ public final class BuildingPreviewCache {
     /** Round-robin start index so a slow config doesn't starve the others. */
     private static int cursor;
 
+    // ── 波次统计：一条日志说清这一轮预览是「读盘」还是「重新烘焙」 ──
+
+    private static int waveLoads;
+    private static int waveBakes;
+    private static long waveLoadNs;
+    private static long waveBakeNs;
+    /** 被重新烘焙的 id（限量，只够在日志里点名，不为它涨内存）。 */
+    private static final List<String> waveBakedIds = new ArrayList<>();
+    private static final int WAVE_ID_LOG_LIMIT = 12;
+
+    /** 记一笔：这次物化是命中磁盘还是重新烘焙。基准测试自有一套报告，不重复计。 */
+    private static void recordWave(boolean fromDisk, String id, long ns) {
+        if (benchMode != null) {
+            return;
+        }
+        if (fromDisk) {
+            waveLoads++;
+            waveLoadNs += ns;
+        } else {
+            waveBakes++;
+            waveBakeNs += ns;
+            if (waveBakedIds.size() < WAVE_ID_LOG_LIMIT) {
+                waveBakedIds.add(id);
+            }
+        }
+    }
+
+    /**
+     * 队列跑空时打一条总结 —— **这是「这次确实是读盘、没有重新烘焙」的唯一正向依据**：
+     * 普通启动应该是「读盘命中 N / 重新烘焙 0」；只有换代、改了 pattern、或缓存被删之后才会出现烘焙。
+     * 每次物化的耗时也一起给（烘焙通常比读盘贵一个数量级，数字本身就能互相印证）。
+     */
+    private static void logWaveIfDrained() {
+        if (waveLoads == 0 && waveBakes == 0) {
+            return;
+        }
+        Log.info(TAG, "[Preview] 本轮完成 {} 栋：读盘命中 {}（{} ms，均 {} ms）/ 重新烘焙 {}（{} ms）· {}px",
+                waveLoads + waveBakes, waveLoads, waveLoadNs / 1_000_000L,
+                waveLoads == 0 ? 0 : waveLoadNs / 1_000_000L / waveLoads,
+                waveBakes, waveBakeNs / 1_000_000L, RES);
+        if (waveBakes > 0) {
+            Log.info(TAG, "[Preview] 重新烘焙的 {} 栋：{}{}", waveBakes, String.join(", ", waveBakedIds),
+                    waveBakes > waveBakedIds.size() ? " …" : "");
+        }
+        waveLoads = 0;
+        waveBakes = 0;
+        waveLoadNs = 0L;
+        waveBakeNs = 0L;
+        waveBakedIds.clear();
+    }
+
     /**
      * Advance the load/bake queue by a small time budget. Must be called on the
      * render thread once per frame (driven by {@link #register()}).
@@ -240,6 +291,7 @@ public final class BuildingPreviewCache {
      */
     public static void pumpQueue() {
         if (pendingCount <= 0) {   // 快路径：全部就绪
+            logWaveIfDrained();
             return;
         }
         List<String> keys = List.copyOf(CACHE.keySet());
@@ -351,6 +403,11 @@ public final class BuildingPreviewCache {
         BOUNDS_CACHE.clear();
         SCALE_CACHE.clear();
         pendingCount = 0;
+        waveLoads = 0;
+        waveBakes = 0;
+        waveLoadNs = 0L;
+        waveBakeNs = 0L;
+        waveBakedIds.clear();
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -358,6 +415,7 @@ public final class BuildingPreviewCache {
     // ═══════════════════════════════════════════════════════════════
 
     private static ResourceLocation materialize(BuildingConfig config, Source source) {
+        long startNs = System.nanoTime();
         try {
             Path file = frameFile(config);
             NativeImage image = null;
@@ -373,6 +431,8 @@ public final class BuildingPreviewCache {
                     }
                 }
             }
+            // 透明校验之后再判定，否则「缓存里是张坏图」会被误记成读盘命中。
+            boolean fromDisk = image != null;
             if (image == null) {
                 if (source == Source.DISK_ONLY) {
                     // 只读模式没有缓存文件就是 miss：绝不回退去烤，否则读取趟的数字会被烘焙污染。
@@ -380,7 +440,7 @@ public final class BuildingPreviewCache {
                 }
                 image = bakeFrame(config);
                 if (image == null) {
-                    return null;
+                    return null;   // 失败：bakeFrame 已 warn，不进统计
                 }
                 if (file != null) {
                     // 覆盖同名文件不会产生新的孤儿；只有名字变了（pattern / 分辨率 / 视角）才需要扫同族，
@@ -391,7 +451,9 @@ public final class BuildingPreviewCache {
             try (Timing ignored = time(Phase.UPLOAD)) {
                 DynamicTexture tex = new DynamicTexture(image);
                 tex.setFilter(true, false);
-                return Minecraft.getInstance().getTextureManager().register(TEX_NAME, tex);
+                ResourceLocation loc = Minecraft.getInstance().getTextureManager().register(TEX_NAME, tex);
+                recordWave(fromDisk, config.id(), System.nanoTime() - startNs);
+                return loc;
             }
         } catch (RuntimeException e) {
             Log.warn(TAG, "Failed to materialize preview {}: {}", config.id(), e.getMessage());
