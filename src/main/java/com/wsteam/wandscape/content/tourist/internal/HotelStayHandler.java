@@ -142,9 +142,6 @@ public final class HotelStayHandler {
         // 影子接手时 wakeDay 还是旧的，sim 会在同一清晨再结算一次晨起
         // （+2 晚、多填一次旅店三值，足以把低级游客顶成满条提前离场）。
         markShadowWoken(tourist, level);
-
-        Log.info(TAG, "[Tourist] {} woke up at {} (still resident, energy → 100)",
-                tourist.getTouristName(), tourist.blockPosition().toShortString());
     }
 
     /**
@@ -213,8 +210,6 @@ public final class HotelStayHandler {
             tourist.setSleepingPos(bed);
             tourist.applyState(TouristState.SLEEPING);
             touristToBed.put(tourist.getUUID(), bed);
-            Log.info(TAG, "[Tourist] {} sleeping in bed at {} (hotel {})",
-                    tourist.getTouristName(), bed.toShortString(), shortId(buildingId));
             return;
         }
         // 没床 → 卡原地（不动，等清晨晨起）

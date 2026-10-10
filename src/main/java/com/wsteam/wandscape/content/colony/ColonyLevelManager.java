@@ -6,6 +6,7 @@ import com.wsteam.wandscape.foundation.sound.SoundService;
 import com.wsteam.wandscape.foundation.registry.WandscapeSounds;
 import com.wsteam.wandscape.content.colony.event.ColonyLevelUpEvent;
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.api.WandscapeApis;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.sounds.SoundSource;
@@ -134,7 +135,7 @@ public final class ColonyLevelManager {
         int level = getLevel(colonyId);
         int maxLevel = Config.COLONY_MAX_LEVEL.get();
         if (level >= maxLevel) {
-            Log.info(TAG, "[Colony] Colony {} already at max level Lv.{} — exp ignored",
+            Log.debug(LogCategory.COLONY, TAG, "[Colony] Colony {} already at max level Lv.{} — exp ignored",
                     shortId(colonyId), level);
             return false;
         }
@@ -142,9 +143,6 @@ public final class ColonyLevelManager {
         int exp = getExperience(colonyId);
         int required = expToNext(level);
         int total = exp + amount;
-
-        Log.info(TAG, "[Colony] +{} exp to colony {} (Lv.{}: {}/{})",
-                amount, shortId(colonyId), level, exp, required);
 
         // Check level-up
         if (total >= required) {

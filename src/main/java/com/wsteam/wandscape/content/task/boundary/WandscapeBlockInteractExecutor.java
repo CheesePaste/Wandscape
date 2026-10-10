@@ -326,7 +326,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             if (bank.available(colonyId, key) < count) {
                 int colonIdx = inputItemId.lastIndexOf(':');
                 String shortId = colonIdx >= 0 ? inputItemId.substring(colonIdx + 1) : inputItemId;
-                Log.warn(TAG, "{}: insufficient input item {} (need={})", action, inputItemId, count);
+                Log.debug(LogCategory.PRODUCTION, "shortage", "{}: insufficient input item {} (need={})", action, inputItemId, count);
                 throw new ResourceShortageException(
                         List.of(new ResourceStack(new ResourceId(shortId), count)));
             }
@@ -345,7 +345,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         for (var e : required.entrySet()) {
             if (bank.countElement(colonyId, e.getKey()) < e.getValue()) {
                 String elementId = e.getKey().name().toLowerCase();
-                Log.warn(TAG, "{}: insufficient {} (need={})", blueprintId, e.getKey(), e.getValue());
+                Log.debug(LogCategory.PRODUCTION, "shortage", "{}: insufficient {} (need={})", blueprintId, e.getKey(), e.getValue());
                 throw new ResourceShortageException(
                         List.of(new ResourceStack(new ResourceId(elementId), e.getValue().intValue())));
             }
@@ -536,7 +536,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             long needed = scaledCraftCost(entry.getValue() * count);
             if (bank.countElement(colonyId, entry.getKey()) < needed) {
                 String elementId = entry.getKey().name().toLowerCase();
-                Log.warn(TAG, "synthesize: insufficient {} (need={})", entry.getKey(), needed);
+                Log.debug(LogCategory.PRODUCTION, "shortage", "synthesize: insufficient {} (need={})", entry.getKey(), needed);
                 throw new ResourceShortageException(
                         List.of(new ResourceStack(new ResourceId(elementId), (int) needed)));
             }
@@ -605,7 +605,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             long needed = scaledCraftCost(entry.getValue() * count);
             if (bank.countElement(colonyId, entry.getKey()) < needed) {
                 String elementId = entry.getKey().name().toLowerCase();
-                Log.warn(TAG, "{}: insufficient {} (need={})", action, entry.getKey(), needed);
+                Log.debug(LogCategory.PRODUCTION, "shortage", "{}: insufficient {} (need={})", action, entry.getKey(), needed);
                 throw new ResourceShortageException(
                         List.of(new ResourceStack(new ResourceId(elementId), (int) needed)));
             }
@@ -615,7 +615,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             if (bank.available(colonyId, key) < count) {
                 int colonIdx = inputItemId.lastIndexOf(':');
                 String shortId = colonIdx >= 0 ? inputItemId.substring(colonIdx + 1) : inputItemId;
-                Log.warn(TAG, "{}: insufficient input item {} (need={})", action, inputItemId, count);
+                Log.debug(LogCategory.PRODUCTION, "shortage", "{}: insufficient input item {} (need={})", action, inputItemId, count);
                 throw new ResourceShortageException(
                         List.of(new ResourceStack(new ResourceId(shortId), count)));
             }
@@ -787,7 +787,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         ColonyItemBank bank = ColonyItemBank.get(level);
         if (bank == null) return;
         if (bank.hasCapacity(colonyId, count)) return;
-        Log.warn(TAG, "{}: warehouse capacity full (need {} items, free={})", blueprintId,
+        Log.debug(LogCategory.PRODUCTION, "shortage", "{}: warehouse capacity full (need {} items, free={})", blueprintId,
                 count, bank.remainingCapacity(colonyId));
         throw new ResourceShortageException(
                 List.of(new ResourceStack(new ResourceId(ColonyItemBank.CAPACITY_SHORTAGE_RESOURCE), 1)));

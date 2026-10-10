@@ -17,6 +17,7 @@ import com.wsteam.wandscape.api.ColonyApi;
 import com.wsteam.wandscape.api.TouristApi;
 // data imports updated
 import com.wsteam.wandscape.foundation.log.Log;
+import com.wsteam.wandscape.foundation.log.LogCategory;
 import com.wsteam.wandscape.api.WandscapeApis;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.content.tourist.entity.TouristEntity;
@@ -274,8 +275,10 @@ public final class TouristSpawnSystem {
         }
 
         if (scheduledColonies == 0) {
-            Log.warn(TAG, "[Tourist] No colony scheduled today — every active colony lacks an intact "
-                    + "tourist-target building (shop/service/relax/atm) or has spawning disabled.");
+            // 静态同因（全镇都没有可用的游客目标建筑），每天重复一次没有新信息 → 每次会话只报一次。
+            Log.warnOnce(LogCategory.TOURIST, "tourist.noScheduleToday",
+                    "[Tourist] No colony scheduled today — every active colony lacks an intact "
+                            + "tourist-target building (shop/service/relax/atm) or has spawning disabled.");
         } else if (!pendingSpawns.isEmpty()) {
             Log.info(TAG, "[Tourist] Schedule created: {} tourists across {} colony(ies)",
                     pendingSpawns.size(), scheduledColonies);
@@ -809,7 +812,6 @@ public final class TouristSpawnSystem {
             for (var entry : overnightCounts.entrySet()) {
                 impl.setOvernightStayerCount(entry.getKey(), entry.getValue());
             }
-            Log.info(TAG, "[Tourist] Overnight stayers counted: {}", overnightCounts);
         }
     }
 
